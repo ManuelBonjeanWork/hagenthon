@@ -1,9 +1,9 @@
 # Scaletta Pitch — FinanzaChiara (5 minuti, giuria hackathon)
 
 > **Livello: `manageriale-tecnico`** — pitch a una giuria: taglio bilanciato prodotto + metodo, dettaglio tecnico incluso solo dove è il differenziatore (agenti, modelli, parallelismo).
-> **Budget parole:** 9 slide, note speaker totali ~530 parole (sotto il tetto dei ~700; il margine assorbe la demo/walkthrough e le pause tra slide).
+> **Budget parole:** 10 slide, note speaker totali ~590 parole (sotto il tetto dei ~700; il margine assorbe la demo/walkthrough e le pause tra slide).
 > **Lingua:** italiano. Termini tecnici consolidati mantenuti (`commit`, `deploy`, `board`, `MVP`, `Issue`, `kWh`, `TAEG`, `TAN`).
-> **Nota di stato (2026-09-14):** claim allineate alla realtà attuale del repo — mergiati scaffolding (#0) e AppContext (#1a); UI/room/simulatore ancora in costruzione dalla pipeline. Se al momento del pitch l'MVP è costruito e deployato, "rinforza" le slide 5, 8 e 9 (vedi note a fondo file).
+> **Nota di stato (2026-09-14):** claim allineate alla realtà attuale del repo — mergiati scaffolding (#0) e AppContext (#1a); UI/room/simulatore ancora in costruzione dalla pipeline. Se al momento del pitch l'MVP è costruito e deployato, "rinforza" le slide 5, 8 e 10 (vedi note a fondo file).
 
 ---
 
@@ -89,27 +89,38 @@
 
 ---
 
-## Slide 9 — FinanzaChiara, in chiaro
+## Slide 9 — Dove vogliamo arrivare (to-be)
+
+- Dalla bolletta d'esempio alla **tua**: un agente AI estrae le voci dal documento reale, l'app le spiega
+- Domande libere su una voce o sulla rata, al livello scelto — sempre "spiega", mai "consiglia"
+- Nuovi scenari (estratto conto, busta paga, affitto) e contenuti che si aggiornano quando cambiano le tariffe
+
+**Nota speaker:** Oggi mostriamo una bolletta d'esempio; dove vogliamo arrivare è la tua. Carichi il documento vero, un agente ne estrae le voci e l'app le spiega al tuo livello — sempre spiegare, mai consigliare. Poi nuovi scenari, dall'estratto conto alla busta paga, e agenti che tengono i contenuti allineati alle norme quando cambia una tariffa. Lo stesso perimetro etico, più in grande.
+
+---
+
+## Slide 10 — FinanzaChiara, in chiaro
 
 - Metodo operativo: repo, board e pipeline di agenti al lavoro; codice su Git
 - MVP in costruzione — scaffolding e stato globale già su `main`
 - *"Le tue bollette e i tuoi prestiti, finalmente in chiaro."*
 
-**Nota speaker:** Chiudiamo con quello che lasciamo: un metodo che funziona — repo, board e una squadra di agenti che costruisce l'MVP, con il codice su Git — e un prodotto già progettato nel dettaglio. Ma il messaggio da ricordare è uno solo: la chiarezza non si ottiene nascondendo i numeri, si ottiene spiegandoli. Le vostre bollette e i vostri prestiti, finalmente in chiaro. Grazie.
+**Nota speaker:** Chiudiamo con quello che lasciamo: un metodo che funziona — repo, board e una squadra di agenti che costruisce l'MVP, con il codice su Git — e un prodotto già progettato nel dettaglio, con una visione chiara di dove arrivare. Ma il messaggio da ricordare è uno solo: la chiarezza non si ottiene nascondendo i numeri, si ottiene spiegandoli. Le vostre bollette e i vostri prestiti, finalmente in chiaro. Grazie.
 
 ---
 
-**Totale note speaker: ~530 parole** — tempo di parlato stimato ~3'45"–4'00" a ritmo da pitch, più la demo/walkthrough (slide 5) e le pause di transizione: rientra nei 5 minuti con margine di sicurezza.
+**Totale note speaker: ~590 parole** — tempo di parlato stimato ~4'00"–4'15" a ritmo da pitch, più la demo/walkthrough (slide 5) e le pause di transizione: resta entro i 5 minuti, con margine ridotto (se serve recuperare tempo, la slide 9 to-be è la più comprimibile).
 
 ---
 
-**Nota stilistica:** Livello `manageriale-tecnico` — giuria di hackathon, deliverable bilanciato prodotto/metodo. Formato scelto: scaletta slide + note speaker separate, il più adatto a un pitch cronometrato. Ho enfatizzato il differenziatore — i tre livelli, il vincolo etico e la pipeline di agenti con nomi/modelli e parallelismo — perché è ciò su cui la giuria valuta chiarezza e correttezza. Ho tenuto le note volutamente sotto il tetto (~530 vs ~700 parole) per non sforare i 5 minuti includendo la demo dal vivo.
+**Nota stilistica:** Livello `manageriale-tecnico` — giuria di hackathon, deliverable bilanciato prodotto/metodo. Formato scelto: scaletta slide + note speaker separate, il più adatto a un pitch cronometrato. Ho enfatizzato il differenziatore — i tre livelli, il vincolo etico e la pipeline di agenti con nomi/modelli e parallelismo — perché è ciò su cui la giuria valuta chiarezza e correttezza. La slide 9 "to-be" mostra ambizione restando dentro il perimetro etico ("spiega, mai consiglia").
 
 Etichetta del livello intermedio: nel copy user-facing uso **"Chiaro"**, la label che l'app mostra davvero nel selettore (`🔵 Chiaro`); il valore interno resta `normale` (case-sensitive, come da `CLAUDE.md`).
 
-**Claim allineate alla realtà (2026-09-14).** Stato verificato sul repo: mergiati #0 (scaffolding) e #1a (AppContext); data layer, componenti, room e glossario non ancora presenti; nessuna build `dist/`. Perciò le slide 5, 8 e 9 evitano di dichiarare un MVP "funzionante e deployato" o un tempo di ~2 ore già consumato:
+**Claim allineate alla realtà (2026-09-14).** Stato verificato sul repo: mergiati #0 (scaffolding) e #1a (AppContext); data layer, componenti, room e glossario non ancora presenti; nessuna build `dist/`. Perciò le slide 5, 8 e 10 evitano di dichiarare un MVP "funzionante e deployato" o un tempo di ~2 ore già consumato:
 - **Slide 5** è un *walkthrough del prodotto* (design), non una demo garantita dal vivo.
 - **Slide 8** presenta le ~2 ore come *stima di piano* sulla critical path, non come risultato raggiunto.
-- **Slide 9** parla di *MVP in costruzione* e di metodo operativo, non di app già consegnata.
+- **Slide 9** è dichiaratamente il *to-be* (visione), separata da ciò che esiste oggi.
+- **Slide 10** parla di *MVP in costruzione* e di metodo operativo, non di app già consegnata.
 
-Se al momento del pitch l'MVP sarà costruito e deployato, si possono "rinforzare": slide 5 → "demo dal vivo"; slide 8 → "~2 ore *effettive*"; slide 9 → "app React funzionante e deployata".
+Se al momento del pitch l'MVP sarà costruito e deployato, si possono "rinforzare": slide 5 → "demo dal vivo"; slide 8 → "~2 ore *effettive*"; slide 10 → "app React funzionante e deployata".
