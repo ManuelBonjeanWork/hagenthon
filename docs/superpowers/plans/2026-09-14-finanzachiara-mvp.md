@@ -4,7 +4,12 @@
 
 > **Spec:** `docs/superpowers/specs/2026-09-14-finanzachiara-design.md`
 
-**Goal:** Costruire l'MVP di FinanzaChiara in ~2h03min usando il pipeline agentico: Orchestrator Agent coordina 8 Issue (0, 1a, 1b, 2, 3, 4, 5, 6), con due finestre di parallelismo — AppContext+DataLayer e i 4 componenti UI — per ridurre al minimo la critical path.
+> **Repo:** https://github.com/ManuelBonjeanWork/hagenthon — **già creato**, remote vuoto (nessun branch pushato).
+> **Projects board:** https://github.com/users/ManuelBonjeanWork/projects/2/views/1 — **già creato**.
+> **Root dell'app:** la radice del repo. `src/`, `tests/`, `vite.config.js` convivono con `docs/` e `tema.md`.
+> **Branch di integrazione:** `main`, creata da `develop` in Phase 0.2. Tutte le PR puntano lì.
+
+**Goal:** Costruire l'MVP di FinanzaChiara in ~2h45min–3h end-to-end (~2h03min di solo sviluppo) usando il pipeline agentico: Orchestrator Agent coordina 8 Issue (0, 1a, 1b, 2, 3, 4, 5, 6), con due finestre di parallelismo — AppContext+DataLayer e i 4 componenti UI — per ridurre al minimo la critical path.
 
 **Architecture:** React 18 + Vite 5 client-side. Stato globale via React Context. Navigazione tramite stato (no router). Contenuto finanziario pre-scritto in `data/`.
 
@@ -17,19 +22,19 @@
 | **Orchestrator Agent** | `claude-opus-5` | Ragionamento complesso: legge il piano, valuta dipendenze, decide quando parallelizzare, gestisce i gate umani |
 | **Developer Agent** | `claude-sonnet-5` | Scrittura di codice React completo da spec; bilanciamento tra qualità e velocità |
 | **Code Review Agent** | `claude-sonnet-5` | Analisi critica del codice, verifica criteri architetturali e copy, feedback strutturato |
-| **Tester Agent** | `claude-sonnet-5` | Scrittura e revisione test E2E (Issue #6); richiede comprensione dei flussi utente |
+| **Tester Agent** | `claude-sonnet-5` | Scrive `tests/integrazione.test.jsx` in Issue #6.5: il flusso utente end-to-end con React Testing Library. Nessun framework E2E (Playwright/Cypress) è installato e non c'è tempo per aggiungerlo — RTL su `<App />` copre gli stessi percorsi |
 | **GitHub PM Agent** | `claude-haiku-4-5-20251001` | Task meccanici e ripetibili: creare Issue, aprire PR, aggiornare label e Projects board |
 
 ## Global Constraints
 
-- React 18 + Vite 5 — `npm create vite@latest finanzachiara -- --template react`
+- React 18 + Vite 5 — scaffolding pinnato a `create-vite@5` (vedi 0.1). `@latest` installerebbe Vite 7 + React 19, non lo stack dichiarato
 - Recharts `^2.x` — unica libreria charting, nessun SVG custom
 - Nessun backend, nessuna API key, tutto client-side
 - Nessuna raccomandazione finanziaria nel copy
 - Livelli: `"semplice"` | `"normale"` | `"tecnico"` (esatti, case-sensitive)
 - Viste: `"hub"` | `"bolletta"` | `"rata"` (esatte)
 - `localStorage` key: `"finanzachiara_level"`
-- Vitest per unit test (`npm run test`)
+- Vitest per unit test — lo script `"test": "vitest run"` va aggiunto in Issue #0 (lo scaffold Vite non lo genera). Mai `vitest` in watch: non termina e blocca l'agente
 - Italiano ovunque — testi UI, label, commenti
 
 ---
@@ -37,37 +42,43 @@
 ## Grafo delle dipendenze (per l'Orchestrator)
 
 ```
-Phase 0 (PARALLELO ~10 min):
-  Orchestrator legge piano  +  GitHub PM crea tutte le Issue
-        │
-        ▼
-Issue #0: Scaffolding (~8 min, SEQUENZIALE — il progetto Vite deve esistere)
-        │
-   ┌────┴────────────────────┐
-   ▼                         ▼
-Issue #1a (~15 min)       Issue #1b (~20 min)      ← PARALLELO
-AppContext.jsx             loanCalculator.js
-+ test                     + bolletta.js
-                           + glossario.js
-                           + rata.js + test
-   └────┬────────────────────┘
-        │ (entrambe Done)
-   ┌────┼──────────┬──────────┐
-   ▼    ▼          ▼          ▼
- #2   #3         #4          #5                    ← PARALLELO (~55 min)
-Header Bolletta  Glossario  RataRoom
-   └────┴──────────┴──────────┘
-        │  (tutte e 4 Done)
-        ▼
-   Issue #6: Integrazione + polish + build (~30 min, SEQUENZIALE)
+Phase 0 — Orchestrator + GitHub PM Agent, in parallelo (~10 min)
+                         │
+                         ▼
+Issue #0 — Scaffolding (~8 min · SEQUENZIALE: il progetto Vite deve esistere)
+                         │
+           ┌─────────────┴─────────────┐
+           ▼                           ▼
+     #1a AppContext              #1b Data Layer           PARALLELO
+       (~15 min)                   (~20 min)              finestra ~20 min
+           └─────────────┬─────────────┘
+                         │  entrambe Done
+    ┌─────────────┬──────┴──────┬─────────────┐
+    ▼             ▼             ▼             ▼
+    #2            #3            #4            #5          PARALLELO
+  Header       Bolletta     Glossario        Rata         finestra ~55 min
+(~30 min)     (~55 min)     (~35 min)     (~40 min)
+    └─────────────┴──────┬──────┴─────────────┘
+                         │  tutte e 4 Done
+                         ▼
+Issue #6 — Integrazione + test + build (~30 min · SEQUENZIALE)
 ```
 
-**Timeline ottimizzata:** ~10 + ~8 + ~20 + ~55 + ~30 = **~2h03min**
+**Tempo di sviluppo sulla critical path:** ~10 + ~8 + ~20 + ~55 + ~30 = **~2h03min**
 (vs struttura precedente a 6 Issue: ~2h55min — risparmio ~50 min)
+
+⚠️ **Non è il tempo end-to-end.** Ogni Issue attraversa Code Review Agent → gate umano → merge
+prima di sbloccare le dipendenti; quei minuti sono sulla critical path, non a lato.
+Contando ~5–7 min per ciclo su 6 punti di sincronizzazione (#0, #1a+#1b, #2–#5, #6):
+**+40/60 min → stima realistica ~2h45min – 3h.**
+I due colli di bottiglia sono i gate dopo #1a/#1b e quello dopo i 4 componenti paralleli:
+lì l'Orchestrator è bloccato su un umano, non su un agente.
 
 ### Status board GitHub Projects
 
-| Colonna | Significato |
+Campo custom **"Stato Pipeline"** sul project 2 (creato in 0.4):
+
+| Valore | Significato |
 |---------|------------|
 | `Queued` | Issue creata, dipendenze non soddisfatte |
 | `In Sviluppo` | Developer Agent attivo |
@@ -84,7 +95,9 @@ Header Bolletta  Glossario  RataRoom
 ## Phase 0 — Setup Pipeline
 **Orchestrator Agent (`claude-opus-5`) + GitHub PM Agent (`claude-haiku-4-5-20251001`) | ~10 min | PARALLELO**
 
-> **Orchestrator e GitHub PM Agent partono insieme:** il primo legge il piano e costruisce lo stato, il secondo crea repo e Issue. Non si aspettano a vicenda.
+> **Orchestrator e GitHub PM Agent partono insieme:** il primo legge il piano e costruisce lo stato, il secondo prepara branch `main`, label e Issue. Non si aspettano a vicenda.
+>
+> ⚠️ Repo e Projects board **esistono già**: non ricrearli.
 
 - [ ] **0.1 — Orchestrator legge il piano e inizializza lo stato** *(in parallelo con 0.2–0.3)*
 
@@ -93,6 +106,13 @@ Header Bolletta  Glossario  RataRoom
 {
   "session": "2026-09-14",
   "plan": "docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md",
+  "project": {
+    "number": 2,
+    "owner": "ManuelBonjeanWork",
+    "repo": "ManuelBonjeanWork/hagenthon",
+    "fieldId": null,
+    "optionIds": {}
+  },
   "issues": {
     "0":  { "status": "queued", "deps": [],                       "slug": "scaffolding" },
     "1a": { "status": "queued", "deps": ["0"],                    "slug": "appcontext" },
@@ -106,12 +126,25 @@ Header Bolletta  Glossario  RataRoom
 }
 ```
 
-- [ ] **0.2 — GitHub PM Agent crea repo e Projects board** *(in parallelo con 0.1)*
+- [ ] **0.2 — GitHub PM Agent prepara branch `main` e label** *(in parallelo con 0.1)*
+
+> Repo (`ManuelBonjeanWork/hagenthon`) e board (project **2**) sono già creati. Qui si crea solo ciò che manca.
 
 ```bash
-gh repo create finanzachiara --public --clone
-cd finanzachiara
-gh project create --title "FinanzaChiara MVP" --owner "@me"
+# a) Bootstrap di main — il remote e' vuoto, nessun branch e' mai stato pushato.
+#    Senza questo, il `git checkout main && git pull` di ogni Issue fallisce.
+git checkout develop
+git checkout -B main
+git push -u origin main
+gh repo edit --default-branch main
+
+# b) Crea le label del pipeline: NON esistono nel repo (ci sono solo quelle di default).
+#    Senza questo passo tutte e 8 le `gh issue create --label "queued"` di 0.3 falliscono.
+#    --force rende il comando idempotente se rilanciato.
+gh label create queued               --color ededed --description "Dipendenze non soddisfatte"            --force
+gh label create needs-fixes          --color d93f0b --description "Code Review Agent richiede modifiche"  --force
+gh label create code-review-approved --color 0e8a16 --description "Code Review Agent ha approvato"        --force
+gh label create ready-to-merge       --color 1d76db --description "In attesa del gate umano"              --force
 ```
 
 - [ ] **0.3 — GitHub PM Agent crea tutte e 8 le Issue** *(in parallelo con 0.1)*
@@ -125,9 +158,10 @@ Prima issue: crea la struttura del progetto Vite. Nessuna dipendenza.
 Issue #1a e #1b partono in parallelo dopo questa.
 
 ## Deliverable
-- Progetto Vite configurato (npm create vite)
+- Progetto Vite alla radice del repo (scaffolding via dir temporanea, create-vite@5)
+- Script \`test\`: \`vitest run\` in package.json
 - Vitest configurato in vite.config.js
-- App.jsx shell (importa tutti i componenti futuri, non li implementa)
+- App.jsx shell autonoma (nessun import da moduli non ancora esistenti: main resta buildabile)
 - App.css con CSS variables
 - index.css reset" \
   --label "queued"
@@ -150,9 +184,9 @@ gh issue create \
 ## Deliverable
 - src/utils/loanCalculator.js
 - src/data/bolletta.js (6 voci a 3 livelli)
-- src/data/glossario.js (25 termini)
+- src/data/glossario.js (24 termini)
 - src/data/rata.js
-- tests/loanCalculator.test.js (4 test passanti)" \
+- tests/loanCalculator.test.js (7 test passanti)" \
   --label "queued"
 
 # Issue #2
@@ -219,7 +253,9 @@ gh issue create \
   --body "## Dipende da: Issue #2, #3, #4, #5 (tutte)
 
 ## Deliverable
-- Navigazione Hub ↔ BollettaRoom ↔ RataRoom funzionante
+- src/App.jsx riscritta: placeholder di Issue #0 sostituiti con i componenti reali
+- tests/integrazione.test.jsx (Tester Agent): flusso utente coperto da RTL
+- Navigazione Hub <-> BollettaRoom <-> RataRoom funzionante
 - Link bidirezionali ExplanationPanel ↔ GlossaryPanel
 - Reset stili Vite default
 - Build produzione senza errori
@@ -227,7 +263,37 @@ gh issue create \
   --label "queued"
 ```
 
-- [ ] **0.4 — Orchestrator attende fine Phase 0, poi dispatcha Developer Agent #0** *(nessuna dipendenza → prima issue pronta)*
+- [ ] **0.4 — GitHub PM Agent collega le Issue alla board** *(dopo 0.3)*
+
+> `gh project create` non genera colonne e le Issue non finiscono sulla board da sole:
+> senza questo passo la status board resta vuota e i 5 stati sono solo decorativi.
+
+```bash
+OWNER=ManuelBonjeanWork
+REPO=ManuelBonjeanWork/hagenthon
+PROJ=2
+
+# a) Campo di stato custom: i default di Projects sono Todo/In Progress/Done,
+#    che non coprono "In Code Review" e "Pronto al Merge".
+gh project field-create $PROJ --owner $OWNER \
+  --name "Stato Pipeline" --data-type SINGLE_SELECT \
+  --single-select-options "Queued,In Sviluppo,In Code Review,Pronto al Merge,Done"
+
+# b) Aggiungi tutte le Issue create in 0.3
+for n in $(gh issue list --repo $REPO --state open --limit 20 --json number -q '.[].number'); do
+  gh project item-add $PROJ --owner $OWNER --url "https://github.com/$REPO/issues/$n"
+done
+
+# c) Gli ID servono all'Orchestrator per spostare le card: salvali in pipeline-state.json
+gh project field-list $PROJ --owner $OWNER --format json
+gh project item-list  $PROJ --owner $OWNER --format json
+```
+
+> **Orchestrator:** a ogni transizione di stato aggiorna la card con
+> `gh project item-edit --id <itemId> --project-id <projId> --field-id <fieldId> --single-select-option-id <optId>`.
+> Se un ID manca, logga e prosegui: la board è osservabilità, non deve bloccare il pipeline.
+
+- [ ] **0.5 — Orchestrator attende fine Phase 0, poi dispatcha Developer Agent #0** *(nessuna dipendenza → prima issue pronta)*
 
 ---
 
@@ -238,8 +304,8 @@ gh issue create \
 
 **Branch:** `feature/0-scaffolding`
 
-**Files da creare:**
-- `vite.config.js` · `tests/setup.js`
+**Files da creare / modificare:**
+- `package.json` (script `test`) · `vite.config.js` · `tests/setup.js`
 - `src/App.jsx` (shell — importa i componenti ma non li implementa)
 - `src/App.css` · `src/index.css`
 
@@ -248,12 +314,34 @@ gh issue create \
 - [ ] **0.1 — Scaffolding**
 
 ```bash
-npm create vite@latest finanzachiara -- --template react
-cd finanzachiara
+git checkout main && git pull
+git checkout -b feature/0-scaffolding
+
+# La radice del repo NON e' vuota (docs/, tema.md, .claude/): create-vite si fermerebbe
+# a chiedere conferma in modo interattivo e bloccherebbe l'agente.
+# Soluzione: scaffolding in una dir temporanea, poi copia dei file alla radice.
+#   - dir SENZA punto iniziale: `.vite-tmp` non e' un nome npm valido e farebbe
+#     comparire il prompt "Package name" (verificato: l'agente si blocca li').
+#   - versione pinnata a 5: `@latest` installerebbe Vite 7 + React 19, non lo stack dichiarato.
+npm create vite@5 vite-tmp -- --template react   # non interattivo: nome + template forniti
+cp -R vite-tmp/. .        # copia anche i dotfile (.gitignore, eslint.config.js)
+rm -rf vite-tmp
+npm pkg set name="finanzachiara"
+
 npm install
 npm install recharts
 npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
-git checkout -b feature/0-scaffolding
+
+# Lo scaffold Vite genera solo dev/build/lint/preview: senza questo ogni `npm run test`
+# del piano (0.7, 1a.2, 1b.2, 6.6) fallisce con "Missing script: test".
+# `vitest run` e non `vitest`: il watch mode non termina e bloccherebbe l'agente.
+npm pkg set scripts.test="vitest run"
+```
+
+Verifica prima di proseguire:
+
+```bash
+npm run test -- --passWithNoTests   # deve uscire con codice 0, non "Missing script"
 ```
 
 - [ ] **0.2 — Configura Vitest in `vite.config.js`**
@@ -272,40 +360,34 @@ export default defineConfig({
 
 ```js
 import '@testing-library/jest-dom'
+import { afterEach } from 'vitest'
+
+// AppContext persiste il livello in localStorage: senza pulizia un test che chiama
+// setLevel() inquina tutti quelli successivi, dentro e fuori dal proprio file.
+afterEach(() => localStorage.clear())
 ```
 
-- [ ] **0.4 — Crea `src/App.jsx` (shell — segnaposto per i componenti)**
+- [ ] **0.4 — Crea `src/App.jsx` (shell autonoma)**
+
+> ⚠️ La shell **non deve importare `./context/AppContext`**: quel file nasce in Issue #1a.
+> Importarlo qui renderebbe `main` non buildabile per tutta la finestra tra il merge di #0
+> e quello di #1a — e il Code Review Agent non avrebbe modo di sapere che è voluto.
+> Zero import da moduli non ancora esistenti: `main` è verde a ogni merge.
 
 ```jsx
-// Shell: le implementazioni arrivano da Issue #1a, #2, #3, #4, #5
-// Il file verrà completato in Issue #6 (integrazione)
-import { AppProvider, useApp } from './context/AppContext'
+// Shell autonoma. Verrà riscritta da capo in Issue #6.1 con i componenti reali
+// di #1a, #2, #3, #4, #5. Fino ad allora non dipende da nulla che non esista già.
 import './App.css'
 
-// Componenti non ancora implementati — placeholder
-function Header() { return <header className="header"><span>FinanzaChiara</span></header> }
-function HubView() { return <div>Hub</div> }
-function BollettaRoom() { return <div>Bolletta</div> }
-function RataRoom() { return <div>Rata</div> }
-function GlossaryPanel() { return null }
-
-function AppContent() {
-  const { activeView } = useApp()
+export default function App() {
   return (
     <div className="app">
-      <Header />
+      <header className="header"><span>💡 FinanzaChiara</span></header>
       <main className="main-content">
-        {activeView === 'hub' && <HubView />}
-        {activeView === 'bolletta' && <BollettaRoom />}
-        {activeView === 'rata' && <RataRoom />}
+        <p>Shell iniziale. I componenti arrivano da Issue #1a, #2, #3, #4, #5.</p>
       </main>
-      <GlossaryPanel />
     </div>
   )
-}
-
-export default function App() {
-  return <AppProvider><AppContent /></AppProvider>
 }
 ```
 
@@ -341,11 +423,20 @@ button { cursor: pointer; }
 body { margin: 0; }
 ```
 
-- [ ] **0.7 — Commit e notifica Orchestrator**
+- [ ] **0.7 — Verifica che `main` resti buildabile**
+
+```bash
+npm run build          # deve completare senza errori
+npm run test -- --passWithNoTests
+```
+
+- [ ] **0.8 — Commit e notifica Orchestrator**
 
 ```bash
 git add -A
 git commit -m "feat(#0): scaffolding Vite + Vitest + App shell + CSS variables
+
+- build e test verdi su una shell senza dipendenze esterne
 
 Closes #0
 
@@ -523,8 +614,8 @@ import { describe, it, expect } from 'vitest'
 import { calcolaRata, calcolaPianoAmmortamento } from '../src/utils/loanCalculator'
 
 describe('calcolaRata', () => {
-  it('€10.000, 36 mesi, 7.5% → ~€310.84', () => {
-    expect(calcolaRata(10000, 7.5, 36)).toBeCloseTo(310.84, 1)
+  it('€10.000, 36 mesi, 7.5% → ~€311.06', () => {
+    expect(calcolaRata(10000, 7.5, 36)).toBeCloseTo(311.06, 1)
   })
   it('tasso zero → P / mesi', () => {
     expect(calcolaRata(12000, 0, 12)).toBeCloseTo(1000, 1)
@@ -587,7 +678,15 @@ export function formatEuro(n) {
 - [ ] **1b.4 — Crea `src/data/bolletta.js`**
 
 ```js
+export const ALIQUOTA_IVA = 0.10
+
+// Somma delle 5 voci imponibili (71.90) + IVA 10% (7.19). Verificato: torna esatto.
 export const TOTALE_BOLLETTA = 79.09
+
+// `scala` dice al SimulationPanel come la voce reagisce ai cursori:
+//   'consumo' → proporzionale ai kWh        'potenza' → proporzionale ai kW
+//   'fissa'   → non cambia mai              'iva'     → ricalcolata sul nuovo imponibile
+// `soggettaFascia` marca l'unica voce su cui la fascia oraria ha effetto reale.
 
 export const bollettaVoci = [
   {
@@ -598,7 +697,7 @@ export const bollettaVoci = [
       tecnico: 'Corrispettivo variabile calcolato sui kWh prelevati, differenziato per fascia F1/F2/F3 secondo delibera ARERA 654/2015/R/eel e aggiornamenti trimestrali.',
     },
     terminiGlossario: ['kwh', 'fascia-oraria', 'f1-f2-f3', 'quota-energia'],
-    variaConConsumo: true,
+    scala: 'consumo', soggettaFascia: true,
   },
   {
     id: 'quota-potenza', label: 'Quota Potenza impegnata', colore: 'potenza', importo: 8.50,
@@ -608,7 +707,7 @@ export const bollettaVoci = [
       tecnico: 'Quota fissa proporzionale alla potenza impegnata contrattualmente (kW), fatturata in €/kW/mese secondo i corrispettivi di potenza ARERA.',
     },
     terminiGlossario: ['potenza-impegnata', 'quota-potenza'],
-    variaConConsumo: false,
+    scala: 'potenza',
   },
   {
     id: 'oneri-sistema', label: 'Oneri di Sistema', colore: 'oneri', importo: 11.20,
@@ -618,7 +717,7 @@ export const bollettaVoci = [
       tecnico: 'Componenti tariffarie ex delibera ARERA ARG/elt 199/11: A3 (incentivi FER), UC1, UC3, MCT. Indipendenti dal profilo di consumo.',
     },
     terminiGlossario: ['oneri-sistema', 'arera', 'dispacciamento'],
-    variaConConsumo: false,
+    scala: 'fissa',
   },
   {
     id: 'trasporto-contatore', label: 'Trasporto e gestione contatore', colore: 'trasporto', importo: 6.80,
@@ -628,7 +727,7 @@ export const bollettaVoci = [
       tecnico: 'Corrispettivi di distribuzione, trasmissione e misura dell\'energia, definiti dall\'ARERA nell\'ambito della regolazione tariffaria delle reti.',
     },
     terminiGlossario: ['quota-fissa', 'contatore'],
-    variaConConsumo: false,
+    scala: 'fissa',
   },
   {
     id: 'accisa', label: 'Imposta: Accisa energia', colore: 'imposte', importo: 3.10,
@@ -638,7 +737,7 @@ export const bollettaVoci = [
       tecnico: 'Imposta di consumo ex D.Lgs. 26/2007 (TUA). Aliquota ridotta domestica: €0.0227/kWh per i primi 1.800 kWh/mese; aliquota ordinaria €0.0460/kWh oltre.',
     },
     terminiGlossario: ['accisa', 'iva'],
-    variaConConsumo: true,
+    scala: 'consumo',
   },
   {
     id: 'iva', label: 'Imposta: IVA 10%', colore: 'imposte', importo: 7.19,
@@ -648,20 +747,22 @@ export const bollettaVoci = [
       tecnico: 'IVA agevolata al 10% ex art. 127-bis DPR 633/72 per forniture di energia elettrica ad uso domestico. Aliquota ordinaria 22% per altri usi.',
     },
     terminiGlossario: ['iva'],
-    variaConConsumo: true,
+    scala: 'iva',
   },
 ]
 ```
 
-- [ ] **1b.5 — Crea `src/data/glossario.js`** (25 termini — contenuto completo nel design doc Sezione 9)
+- [ ] **1b.5 — Crea `src/data/glossario.js`** (24 termini — contenuto completo nel design doc Sezione 9)
 
 ```js
 // Struttura di ogni termine:
 // { id, termine, lettera, spiegazione: {semplice, normale, tecnico}, correlati: string[] }
-// Termini: accisa, ammortamento, arera, capitale, contatore, dispacciamento,
-//          estratto-conto, f1-f2-f3, fascia-oraria, inflazione, interessi, iva,
-//          kwh, oneri-sistema, piano-rimborso, potenza-impegnata, quota-energia,
-//          quota-fissa, rata, spread, taeg, tan, tasso-fisso, tasso-variabile
+// 24 termini: accisa, ammortamento, arera, capitale, contatore, dispacciamento,
+//          f1-f2-f3, fascia-oraria, inflazione, interessi, iva, kwh, oneri-sistema,
+//          piano-rimborso, potenza-impegnata, quota-energia, quota-fissa, quota-potenza,
+//          rata, spread, taeg, tan, tasso-fisso, tasso-variabile
+// NB: ogni id citato in `terminiGlossario` (bolletta.js) e in `correlati` DEVE esistere qui,
+//     altrimenti il link apre il pannello su un termine inesistente senza alcun errore.
 // Testo completo: design doc Sezione 9 → "Struttura dati"
 
 export const glossario = [
@@ -672,7 +773,7 @@ export const glossario = [
   { id: 'contatore', termine: 'Contatore', lettera: 'C', spiegazione: { semplice: 'Il dispositivo che misura quanta elettricità usi. Come il chilometrico di un\'auto.', normale: 'Strumento di misura dell\'energia prelevata. Il contatore elettronico trasmette le letture automaticamente.', tecnico: 'Misuratore di energia (punto di prelievo). I contatori 2G trasmettono teleletture ogni 15 minuti.' }, correlati: ['quota-potenza', 'quota-energia'] },
   { id: 'dispacciamento', termine: 'Dispacciamento', lettera: 'D', spiegazione: { semplice: 'Il lavoro di bilanciamento continuo della rete elettrica: quanta corrente entra deve essere uguale a quanta ne esce.', normale: 'Servizio di gestione in tempo reale del bilanciamento tra produzione e consumo. Gestito da Terna.', tecnico: 'Servizio di dispacciamento (SD) ex Terna S.p.A. come TSO. Costi uplift socializzati attraverso componenti UC.' }, correlati: ['oneri-sistema', 'arera'] },
   { id: 'f1-f2-f3', termine: 'F1 / F2 / F3', lettera: 'F', spiegazione: { semplice: 'Le fasce orarie della luce: F1 è la più cara (giorno feriale), F3 la più economica (notte e festivi).', normale: 'F1: lun-ven 8-19 (picco). F2: lun-ven 7-8 e 19-23, sab 7-23 (intermedio). F3: notti, domeniche, festivi (minimo).', tecnico: 'Fasce TOU definite dall\'ARERA. F1: ore di picco. F2: ore intermedie. F3: ore fuori picco. Rilevanti per tariffe biorarie/multiorarie.' }, correlati: ['fascia-oraria', 'quota-energia', 'kwh'] },
-  { id: 'fascia-oraria', termine: 'Fascia oraria', lettera: 'F', spiegazione: { semplice: 'A seconda dell\'ora del giorno l\'elettricità costa di più o di meno. Di notte costa meno — come i voli lowcost.', normale: 'Suddivisione della giornata in periodi con prezzi diversi. Usare elettrodomestici pesanti di notte può ridurre la bolletta.', tecnico: 'Struttura tariffaria time-of-use (TOU) che differenzia il corrispettivo per fascia F1/F2/F3.' }, correlati: ['f1-f2-f3', 'quota-energia'] },
+  { id: 'fascia-oraria', termine: 'Fascia oraria', lettera: 'F', spiegazione: { semplice: 'A seconda dell\'ora del giorno l\'elettricità costa di più o di meno. Di notte costa meno — come i voli lowcost.', normale: 'Suddivisione della giornata in periodi con prezzi diversi: lo stesso kWh costa cifre diverse a seconda dell\'ora in cui viene prelevato.', tecnico: 'Struttura tariffaria time-of-use (TOU) che differenzia il corrispettivo per fascia F1/F2/F3.' }, correlati: ['f1-f2-f3', 'quota-energia'] },
   { id: 'inflazione', termine: 'Inflazione', lettera: 'I', spiegazione: { semplice: 'L\'aumento generale dei prezzi nel tempo. Se è alta, con gli stessi soldi compri meno rispetto all\'anno scorso.', normale: 'Variazione percentuale del livello generale dei prezzi. In Italia calcolata dall\'ISTAT (indice NIC e FOI).', tecnico: 'Variazione del livello aggregato dei prezzi (CPI). Rilevante per adeguamento canoni e rivalutazione capitali.' }, correlati: ['spread', 'tasso-variabile'] },
   { id: 'interessi', termine: 'Interessi', lettera: 'I', spiegazione: { semplice: 'Il costo che paghi per aver preso in prestito dei soldi. Come un affitto per usare il denaro della banca.', normale: 'Quota rata che remunera il prestatore. Si calcola sul debito residuo × tasso mensile.', tecnico: 'Quota interessi = debito residuo × (TAN / 12). Decresce nell\'ammortamento alla francese.' }, correlati: ['rata', 'capitale', 'tan', 'taeg'] },
   { id: 'iva', termine: 'IVA', lettera: 'I', spiegazione: { semplice: 'La tassa che si paga su quasi tutti i prodotti. Per l\'energia di casa è 10% (meno del 22% normale) perché è essenziale.', normale: 'Imposta sul Valore Aggiunto. Per energia elettrica domestica aliquota agevolata 10%. Per uso professionale 22%.', tecnico: 'IVA agevolata 10% ex Tabella A, parte II-bis DPR 633/72 per forniture domestiche. Aliquota ordinaria 22% altri usi.' }, correlati: ['accisa'] },
@@ -682,9 +783,10 @@ export const glossario = [
   { id: 'potenza-impegnata', termine: 'Potenza impegnata', lettera: 'P', spiegazione: { semplice: 'La quantità massima di elettricità che puoi usare contemporaneamente. Se superi questo limite, il contatore si stacca.', normale: 'La potenza contrattuale (tipicamente 3 kW per uso domestico). Determina quanti elettrodomestici puoi usare insieme.', tecnico: 'Potenza disponibile massima (kW) definita dal contratto. Il superamento attiva la protezione di massima corrente.' }, correlati: ['quota-potenza', 'contatore', 'kwh'] },
   { id: 'quota-energia', termine: 'Quota energia', lettera: 'Q', spiegazione: { semplice: 'La parte della bolletta che dipende da quanta elettricità hai usato. Più consumi, più paghi.', normale: 'Componente variabile: kWh consumati × prezzo unitario per fascia oraria.', tecnico: 'Corrispettivo variabile €/kWh per fascia F1/F2/F3. Aggiornato trimestralmente da ARERA per il mercato tutelato.' }, correlati: ['kwh', 'fascia-oraria', 'f1-f2-f3'] },
   { id: 'quota-fissa', termine: 'Quota fissa', lettera: 'Q', spiegazione: { semplice: 'La parte che paghi sempre, anche se non usi affatto la corrente. Come l\'abbonamento a uno streaming.', normale: 'Componente mensile indipendente dai consumi. Copre gestione contatore, trasporto e parte degli oneri di sistema.', tecnico: 'Corrispettivo fisso €/mese che remunera i costi di rete indipendenti dal volume di energia prelevata.' }, correlati: ['oneri-sistema', 'quota-potenza'] },
+  { id: 'quota-potenza', termine: 'Quota potenza', lettera: 'Q', spiegazione: { semplice: 'La parte fissa che paghi per avere a disposizione una certa quantità di corrente, anche nei mesi in cui consumi pochissimo.', normale: 'Costo mensile proporzionale alla potenza impegnata dal contratto (di solito 3 kW). Aumenta se chiedi più potenza disponibile.', tecnico: 'Corrispettivo €/kW/mese sulla potenza impegnata contrattualmente, secondo i corrispettivi di potenza definiti da ARERA.' }, correlati: ['potenza-impegnata', 'quota-fissa', 'arera'] },
   { id: 'rata', termine: 'Rata', lettera: 'R', spiegazione: { semplice: 'Il pagamento periodico per restituire un prestito. Ogni rata comprende una parte del debito e un po\' di interessi.', normale: 'Pagamento fisso (nell\'ammortamento alla francese) composto da quota capitale + quota interessi. La proporzione cambia nel tempo.', tecnico: 'R = P × [r(1+r)^n] / [(1+r)^n - 1]. Quota interessi decresce, quota capitale cresce nel tempo.' }, correlati: ['ammortamento', 'capitale', 'interessi', 'tan'] },
   { id: 'spread', termine: 'Spread', lettera: 'S', spiegazione: { semplice: 'Il "ricarico" che la banca aggiunge al tasso base per guadagnare sul prestito. Più alto è, più paghi.', normale: 'Margine aggiunto al tasso di riferimento (es. Euribor) per determinare il tasso variabile finale.', tecnico: 'Componente del tasso che remunera rischio di credito e margine commerciale. TAN = tasso indice + spread.' }, correlati: ['tan', 'taeg', 'tasso-variabile'] },
-  { id: 'taeg', termine: 'TAEG', lettera: 'T', spiegazione: { semplice: 'Il costo totale del prestito in percentuale, tutto incluso. TAN è il prezzo del pane, TAEG è quello che paghi alla cassa con sacchetto e scontrino.', normale: 'Tasso Annuo Effettivo Globale: TAN + spese accessorie (assicurazioni, commissioni). È il numero da confrontare tra offerte.', tecnico: 'Indicatore sintetico ex direttiva 2008/48/CE inclusivo di tutti gli oneri noti al momento della stipula.' }, correlati: ['tan', 'rata', 'ammortamento'] },
+  { id: 'taeg', termine: 'TAEG', lettera: 'T', spiegazione: { semplice: 'Il costo totale del prestito in percentuale, tutto incluso. TAN è il prezzo del pane, TAEG è quello che paghi alla cassa con sacchetto e scontrino.', normale: 'Tasso Annuo Effettivo Globale: TAN + spese accessorie (assicurazioni, commissioni). È l\'indicatore che rende confrontabili offerte con spese diverse.', tecnico: 'Indicatore sintetico ex direttiva 2008/48/CE inclusivo di tutti gli oneri noti al momento della stipula.' }, correlati: ['tan', 'rata', 'ammortamento'] },
   { id: 'tan', termine: 'TAN', lettera: 'T', spiegazione: { semplice: 'Il tasso di interesse "puro" di un prestito, senza le spese extra. Di solito è più basso del TAEG.', normale: 'Tasso Annuo Nominale: il tasso applicato al capitale, senza spese accessorie. Serve per calcolare la rata.', tecnico: 'Tasso nominale annuo per il calcolo della quota interessi nelle rate. Non include commissioni o oneri (che confluiscono nel TAEG).' }, correlati: ['taeg', 'interessi', 'rata'] },
   { id: 'tasso-fisso', termine: 'Tasso fisso', lettera: 'T', spiegazione: { semplice: 'Il tasso non cambia mai per tutta la durata del prestito. La rata che paghi oggi è uguale a quella di tra 10 anni.', normale: 'Il tasso è definito alla stipula e rimane invariato. Protegge dai rialzi dei tassi di mercato.', tecnico: 'TAN costante per l\'intera vita del finanziamento, indipendente dall\'andamento dei tassi di riferimento.' }, correlati: ['tasso-variabile', 'tan', 'spread'] },
   { id: 'tasso-variabile', termine: 'Tasso variabile', lettera: 'T', spiegazione: { semplice: 'Il tasso può cambiare nel tempo. Se i tassi salgono, paghi di più; se scendono, paghi di meno.', normale: 'Agganciato a un indice di riferimento (es. Euribor 3 mesi) + spread fisso. La rata varia all\'aggiornamento periodico.', tecnico: 'TAN = indice di riferimento (Euribor/IRS) + spread. Rata si ricalcola ad ogni reset periodico.' }, correlati: ['tasso-fisso', 'tan', 'spread', 'inflazione'] },
@@ -712,7 +814,7 @@ export const DURATA_DEFAULT = 36
 ```bash
 npm run test -- tests/loanCalculator.test.js
 ```
-Atteso: 4 test PASS.
+Atteso: **7 test PASS** (3 in `calcolaRata` + 4 in `calcolaPianoAmmortamento`).
 
 - [ ] **1b.8 — Commit**
 
@@ -722,9 +824,9 @@ git commit -m "feat(#1b): data layer completo
 
 - loanCalculator: calcolaRata, calcolaPianoAmmortamento, formatEuro
 - data/bolletta.js: 6 voci con spiegazioni a 3 livelli
-- data/glossario.js: 25 termini con correlati
+- data/glossario.js: 24 termini con correlati
 - data/rata.js: contesti e costanti
-- 4 unit test passanti
+- 7 unit test passanti
 
 Closes #1b
 
@@ -1013,28 +1115,42 @@ export default function ExplanationPanel() {
 
 ```jsx
 import { useState } from 'react'
-import { bollettaVoci, TOTALE_BOLLETTA } from '../../data/bolletta'
+import { bollettaVoci, TOTALE_BOLLETTA, ALIQUOTA_IVA } from '../../data/bolletta'
 import './SimulationPanel.css'
 
+// Ipotesi dichiarata, non un dato: lo sconto per fascia vale SOLO sulla quota energia.
+// Oneri, trasporto, quota potenza e imposte non dipendono dall'ora in cui consumi.
 const SCONTO_FASCIA = { giorno: 0, sera: -0.05, notte: -0.15 }
 const CONSUMO_BASE = 180
 const POTENZA_BASE = 3
 
 function calcolaBollettaSimulata(consumo, potenza, fascia) {
-  let totale = bollettaVoci.reduce((sum, v) => {
-    if (v.variaConConsumo) return sum + v.importo * (consumo / CONSUMO_BASE)
-    if (v.id === 'quota-potenza') return sum + v.importo * (potenza / POTENZA_BASE)
-    return sum + v.importo
-  }, 0)
-  return Math.max(totale * (1 + SCONTO_FASCIA[fascia]), 0)
+  const imponibile = bollettaVoci
+    .filter(v => v.scala !== 'iva')
+    .reduce((sum, v) => {
+      if (v.scala === 'consumo') {
+        const base = v.importo * (consumo / CONSUMO_BASE)
+        return sum + (v.soggettaFascia ? base * (1 + SCONTO_FASCIA[fascia]) : base)
+      }
+      if (v.scala === 'potenza') return sum + v.importo * (potenza / POTENZA_BASE)
+      return sum + v.importo
+    }, 0)
+  // L'IVA si RICALCOLA sul nuovo imponibile: non e' una voce che scala per conto suo.
+  // Ai valori di default (180 kWh, 3 kW, giorno) questo riproduce esattamente €79.09.
+  return { imponibile, iva: imponibile * ALIQUOTA_IVA, totale: imponibile * (1 + ALIQUOTA_IVA) }
+}
+
+// Senza segno esplicito un risparmio si stampa identico a un aumento.
+function conSegno(n, decimali = 2) {
+  return `${n >= 0 ? '+' : '−'}€${Math.abs(n).toFixed(decimali)}`
 }
 
 export default function SimulationPanel() {
   const [consumo, setConsumo] = useState(CONSUMO_BASE)
   const [potenza, setPotenza] = useState(POTENZA_BASE)
   const [fascia, setFascia] = useState('giorno')
-  const simulata = calcolaBollettaSimulata(consumo, potenza, fascia)
-  const diff = simulata - TOTALE_BOLLETTA
+  const { imponibile, iva, totale } = calcolaBollettaSimulata(consumo, potenza, fascia)
+  const diff = totale - TOTALE_BOLLETTA
   return (
     <div className="simulation-panel">
       <h3 className="sim-title">💡 Cosa succederebbe se cambiassi i tuoi consumi?</h3>
@@ -1057,12 +1173,19 @@ export default function SimulationPanel() {
         </div>
       </div>
       <div className={`sim-result ${diff < 0 ? 'risparmio' : 'aumento'}`}>
-        <div className="result-row"><span>Con queste scelte:</span><strong>€{simulata.toFixed(2)}</strong></div>
+        <div className="result-row"><span>Con queste scelte:</span><strong>€{totale.toFixed(2)}</strong></div>
+        <div className="result-row muted"><span>di cui imponibile:</span><span>€{imponibile.toFixed(2)}</span></div>
+        <div className="result-row muted"><span>di cui IVA 10%:</span><span>€{iva.toFixed(2)}</span></div>
         <div className="result-row muted"><span>Bolletta di esempio:</span><span>€{TOTALE_BOLLETTA.toFixed(2)}</span></div>
         <div className="result-row differenza"><span>Differenza:</span>
-          <strong>{diff >= 0 ? '+' : ''}€{diff.toFixed(2)}/mese → {diff >= 0 ? '+' : ''}€{Math.abs(diff * 12).toFixed(0)}/anno</strong>
+          <strong>{conSegno(diff)}/mese → {conSegno(diff * 12, 0)}/anno</strong>
         </div>
       </div>
+      <p className="sim-nota">
+        Come è calcolato: quota energia e accisa scalano con i kWh, la quota potenza con i kW,
+        oneri di sistema e trasporto restano fissi, l'IVA è il 10% dell'imponibile risultante.
+        Lo sconto per fascia (−5% sera, −15% notte) è un'ipotesi applicata alla sola quota energia.
+      </p>
     </div>
   )
 }
@@ -1085,6 +1208,7 @@ export default function SimulationPanel() {
 .result-row { display: flex; justify-content: space-between; font-size: 0.95rem; }
 .result-row.muted { color: var(--color-text-muted); font-size: 0.85rem; }
 .result-row.differenza { font-weight: 700; }
+.sim-nota { margin-top: 14px; font-size: 0.75rem; line-height: 1.5; color: var(--color-text-muted); }
 .sim-result.risparmio .differenza { color: #16a34a; }
 .sim-result.aumento   .differenza { color: #dc2626; }
 ```
@@ -1148,11 +1272,14 @@ git push origin feature/3-bollettaroom
 - [ ] **4.1 — Crea `GlossarySearch.jsx`**
 
 ```jsx
-export default function GlossarySearch({ value, onChange }) {
+export default function GlossarySearch({ value, onChange, autoFocus }) {
   return (
     <div className="glossary-search">
-      <span className="search-icon">🔍</span>
-      <input type="search" placeholder="Cerca un termine..." value={value} onChange={e => onChange(e.target.value)} className="search-input" autoFocus />
+      <span className="search-icon" aria-hidden="true">🔍</span>
+      {/* autoFocus solo quando il pannello si apre "vuoto": se arriva da un link
+          su un termine, il focus deve restare su quel termine, non sulla ricerca. */}
+      <input type="search" aria-label="Cerca un termine nel glossario" placeholder="Cerca un termine..."
+        value={value} onChange={e => onChange(e.target.value)} className="search-input" autoFocus={autoFocus} />
     </div>
   )
 }
@@ -1168,20 +1295,25 @@ export default function GlossaryTerm({ termine, isActive, onSelect }) {
   const { currentLevel, openGlossaryTerm } = useApp()
   const ref = useRef(null)
   useEffect(() => { if (isActive && ref.current) ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [isActive])
+  const bodyId = `term-body-${termine.id}`
   return (
-    <div ref={ref} className={`glossary-term ${isActive ? 'active' : ''}`} onClick={onSelect}>
-      <div className="term-header">
+    <div ref={ref} className={`glossary-term ${isActive ? 'active' : ''}`}>
+      {/* Il toggle e' un <button> vero, non un <div onClick>: raggiungibile da Tab,
+          attivabile con Invio/Spazio e annunciato con lo stato aperto/chiuso.
+          I link ai correlati stanno FUORI da questo bottone (button annidati sono
+          HTML invalido), percio' non serve piu' e.stopPropagation(). */}
+      <button className="term-header" onClick={onSelect} aria-expanded={isActive} aria-controls={bodyId}>
         <span className="term-nome">{termine.termine}</span>
-        <span className="term-toggle">{isActive ? '▲' : '▼'}</span>
-      </div>
+        <span className="term-toggle" aria-hidden="true">{isActive ? '▲' : '▼'}</span>
+      </button>
       {isActive && (
-        <div className="term-body">
+        <div className="term-body" id={bodyId}>
           <p className="term-spiegazione">{termine.spiegazione[currentLevel]}</p>
           {termine.correlati?.length > 0 && (
             <div className="term-correlati">
               <span className="correlati-label">Vedi anche: </span>
               {termine.correlati.map(id => (
-                <button key={id} className="correlato-link" onClick={e => { e.stopPropagation(); openGlossaryTerm(id) }}>
+                <button key={id} className="correlato-link" onClick={() => openGlossaryTerm(id)}>
                   {id.replace(/-/g, ' ')}
                 </button>
               ))}
@@ -1197,7 +1329,7 @@ export default function GlossaryTerm({ termine, isActive, onSelect }) {
 - [ ] **4.3 — Crea `GlossaryPanel.jsx` + `GlossaryPanel.css`**
 
 ```jsx
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useApp } from '../../context/AppContext'
 import { glossario } from '../../data/glossario'
 import GlossarySearch from './GlossarySearch'
@@ -1214,13 +1346,28 @@ export default function GlossaryPanel() {
   }, [query])
   const perLettera = useMemo(() => terminiVisibili.reduce((acc, t) => { const l = t.lettera; if (!acc[l]) acc[l] = []; acc[l].push(t); return acc }, {}), [terminiVisibili])
   function handleClose() { setGlossaryOpen(false); setActiveGlossaryTerm(null); setQuery('') }
+
+  // Esc chiude, e il focus torna dov'era prima dell'apertura: senza questo chi naviga
+  // da tastiera resta bloccato in fondo alla pagina dopo aver chiuso il pannello.
+  const focusPrecedente = useRef(null)
+  useEffect(() => {
+    if (!glossaryOpen) return
+    focusPrecedente.current = document.activeElement
+    function onKeyDown(e) { if (e.key === 'Escape') handleClose() }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      focusPrecedente.current?.focus?.()
+    }
+  }, [glossaryOpen])
+
   if (!glossaryOpen) return null
   return (
     <>
-      <div className="glossary-backdrop" onClick={handleClose} />
-      <aside className="glossary-panel">
-        <div className="glossary-header"><h2>📖 Glossario</h2><button className="close-btn" onClick={handleClose}>✕</button></div>
-        <div className="glossary-search-wrap"><GlossarySearch value={query} onChange={setQuery} /></div>
+      <div className="glossary-backdrop" onClick={handleClose} aria-hidden="true" />
+      <aside className="glossary-panel" role="dialog" aria-modal="true" aria-label="Glossario">
+        <div className="glossary-header"><h2>📖 Glossario</h2><button className="close-btn" onClick={handleClose} aria-label="Chiudi il glossario">✕</button></div>
+        <div className="glossary-search-wrap"><GlossarySearch value={query} onChange={setQuery} autoFocus={!activeGlossaryTerm} /></div>
         <div className="glossary-list">
           {Object.keys(perLettera).sort().map(lettera => (
             <section key={lettera} className="lettera-group">
@@ -1253,12 +1400,13 @@ export default function GlossaryPanel() {
 .glossary-list { flex: 1; overflow-y: auto; padding: 8px 0; }
 .lettera-group { margin-bottom: 4px; }
 .lettera-heading { padding: 8px 20px 4px; font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-.glossary-term { padding: 12px 20px; border-bottom: 1px solid var(--color-border); cursor: pointer; }
+.glossary-term { border-bottom: 1px solid var(--color-border); }
 .glossary-term:hover, .glossary-term.active { background: #eff6ff; }
-.term-header { display: flex; justify-content: space-between; align-items: center; }
+.term-header { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 20px; background: none; border: none; font: inherit; color: inherit; text-align: left; }
+.term-body { padding: 0 20px 12px; margin-top: 0; }
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .term-nome { font-weight: 600; font-size: 0.95rem; }
 .term-toggle { font-size: 0.7rem; color: var(--color-text-muted); }
-.term-body { margin-top: 10px; }
 .term-spiegazione { font-size: 0.875rem; line-height: 1.6; }
 .term-correlati { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .correlati-label { font-size: 0.75rem; color: var(--color-text-muted); }
@@ -1339,7 +1487,9 @@ export default function LoanVisualizer({ importo, durata, tasso }) {
       <div className="riepilogo">
         <div className="riepilogo-item"><span>Rata mensile</span><strong>{formatEuro(rata)}</strong></div>
         <div className="riepilogo-item"><span>Totale pagato</span><strong>{formatEuro(totale)}</strong></div>
-        <div className="riepilogo-item highlight"><span>Di cui interessi</span><strong>{formatEuro(totInteressi)} ({((totInteressi/totale)*100).toFixed(1)}% in più)</strong></div>
+        {/* "in più" si misura sul capitale preso a prestito, non sul totale pagato:
+            su 10.000€ a 36 mesi / 7,5% sono +12,0%, non 10,7%. */}
+        <div className="riepilogo-item highlight"><span>Di cui interessi</span><strong>{formatEuro(totInteressi)} — il {((totInteressi / importo) * 100).toFixed(1)}% in più del capitale</strong></div>
       </div>
       <h4 className="grafico-title">Come cambia ogni rata nel tempo</h4>
       <ResponsiveContainer width="100%" height={220}>
@@ -1427,14 +1577,55 @@ git push origin feature/5-rataroom
 
 ---
 
-- [ ] **6.1 — Pulisci `src/index.css`**
+- [ ] **6.1 — Riscrivi `src/App.jsx`** ⚠️ **passo centrale: senza questo l'app mostra ancora i segnaposto di Issue #0**
+
+Issue #2–#5 non toccano mai `App.jsx` (è ciò che rende sicuro il parallelismo). Di conseguenza il file
+contiene ancora i placeholder `function HubView() { return <div>Hub</div> }` scritti in #0.
+Vanno sostituiti con gli import reali, altrimenti il demo flow al passo 6.4 fallisce al punto 1.
+
+```jsx
+import { AppProvider, useApp } from './context/AppContext'
+import Header from './components/Header/Header'
+import HubView from './components/Hub/HubView'
+import BollettaRoom from './components/Bolletta/BollettaRoom'
+import RataRoom from './components/Rata/RataRoom'
+import GlossaryPanel from './components/Glossario/GlossaryPanel'
+import './App.css'
+
+function AppContent() {
+  const { activeView } = useApp()
+  return (
+    <div className="app">
+      <Header />
+      <main className="main-content">
+        {activeView === 'hub' && <HubView />}
+        {activeView === 'bolletta' && <BollettaRoom />}
+        {activeView === 'rata' && <RataRoom />}
+      </main>
+      <GlossaryPanel />
+    </div>
+  )
+}
+
+export default function App() {
+  return <AppProvider><AppContent /></AppProvider>
+}
+```
+
+Verifica che nessun segnaposto sia sopravvissuto:
+
+```bash
+grep -n "return <div>" src/App.jsx   # non deve stampare nulla
+```
+
+- [ ] **6.2 — Pulisci `src/index.css`**
 
 ```css
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; }
 ```
 
-- [ ] **6.2 — Verifica `src/main.jsx`**
+- [ ] **6.3 — Verifica `src/main.jsx`**
 
 ```jsx
 import { StrictMode } from 'react'
@@ -1444,7 +1635,7 @@ import App from './App.jsx'
 createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>)
 ```
 
-- [ ] **6.3 — Demo flow completo (verifica manuale)**
+- [ ] **6.4 — Demo flow completo (verifica manuale)**
 
   1. Hub mostra 3 card ✓
   2. Card "Bolletta" → BollettaRoom ✓
@@ -1459,27 +1650,123 @@ createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMo
   11. Header logo → torna all'Hub ✓
   12. Hub → Card "Parole difficili" → GlossaryPanel apre ✓
 
-- [ ] **6.4 — Esegui tutti i test**
+- [ ] **6.5 — Tester Agent: `tests/integrazione.test.jsx`** *(il flusso di 6.4, automatizzato)*
+
+> Recharts non disegna nulla sotto jsdom (`ResponsiveContainer` misura 0×0): asserire sul
+> riepilogo numerico, mai sul grafico.
+
+```jsx
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import App from '../src/App'
+
+// localStorage è ripulito da tests/setup.js dopo ogni test.
+
+describe('Flusso utente completo', () => {
+  it('l\'Hub presenta le 3 situazioni', () => {
+    render(<App />)
+    expect(screen.getByText('Cosa vuoi capire oggi?')).toBeInTheDocument()
+    expect(screen.getByText('La mia bolletta')).toBeInTheDocument()
+    expect(screen.getByText('Un prestito o una rata')).toBeInTheDocument()
+    expect(screen.getByText('Parole difficili')).toBeInTheDocument()
+  })
+
+  it('una voce di bolletta apre la spiegazione corrispondente', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('La mia bolletta'))
+    expect(screen.getByText('⚡ La tua bolletta della luce')).toBeInTheDocument()
+    await user.click(screen.getByText('Oneri di Sistema'))
+    expect(screen.getByText(/Sono costi fissi che tutti i clienti italiani pagano/)).toBeInTheDocument()
+  })
+
+  it('il link della spiegazione apre il glossario sul termine giusto', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('La mia bolletta'))
+    await user.click(screen.getByText('Oneri di Sistema'))
+    await user.click(screen.getByRole('button', { name: /oneri sistema/i }))
+    expect(screen.getByRole('heading', { name: /Glossario/ })).toBeInTheDocument()
+    // il termine deve essere espanso, non solo il pannello aperto
+    expect(screen.getByText(/Costi che tutti pagano per tenere in funzione la rete italiana/)).toBeInTheDocument()
+  })
+
+  it('ogni id in terminiGlossario e correlati esiste nel glossario', async () => {
+    const { bollettaVoci } = await import('../src/data/bolletta')
+    const { glossario } = await import('../src/data/glossario')
+    const ids = new Set(glossario.map(t => t.id))
+    const riferiti = [
+      ...bollettaVoci.flatMap(v => v.terminiGlossario ?? []),
+      ...glossario.flatMap(t => t.correlati ?? []),
+    ]
+    expect([...new Set(riferiti)].filter(id => !ids.has(id))).toEqual([])
+  })
+
+  it('il LevelSelector cambia il testo delle spiegazioni', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('La mia bolletta'))
+    await user.click(screen.getByText('Oneri di Sistema'))
+    await user.click(screen.getByText('🔬 Tecnico'))
+    expect(screen.getByText(/delibera ARERA ARG\/elt 199\/11/)).toBeInTheDocument()
+  })
+
+  it('il livello scelto viene persistito', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('🔬 Tecnico'))
+    expect(localStorage.getItem('finanzachiara_level')).toBe('tecnico')
+  })
+
+  it('ai valori di default la simulazione riproduce la bolletta di esempio', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('La mia bolletta'))
+    // 180 kWh / 3 kW / giorno → differenza esattamente zero
+    expect(screen.getByText(/\+€0\.00\/mese/)).toBeInTheDocument()
+  })
+
+  it('RataRoom calcola la rata di default', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('Un prestito o una rata'))
+    expect(screen.getByText('💳 Quanto costa davvero un prestito?')).toBeInTheDocument()
+    // formatEuro usa lo spazio unificatore: match parziale, non stringa esatta
+    expect(screen.getByText(/311,06/)).toBeInTheDocument()
+  })
+
+  it('il logo riporta all\'Hub', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByText('Un prestito o una rata'))
+    await user.click(screen.getByText('💡 FinanzaChiara'))
+    expect(screen.getByText('Cosa vuoi capire oggi?')).toBeInTheDocument()
+  })
+})
+```
+
+- [ ] **6.6 — Esegui tutti i test**
 
 ```bash
 npm run test
 ```
 Atteso: tutti PASS.
 
-- [ ] **6.5 — Build produzione**
+- [ ] **6.7 — Build produzione**
 
 ```bash
 npm run build
 ```
 Atteso: `dist/` generata senza errori.
 
-- [ ] **6.6 — Commit**
+- [ ] **6.8 — Commit**
 
 ```bash
 git add -A
 git commit -m "feat(#6): integrazione finale, polish e build verificata
 
-- Demo flow completo verificato
+- App.jsx cablata sui componenti reali
+- Demo flow completo verificato (manuale + tests/integrazione.test.jsx)
 - Build produzione senza errori
 - Tutti i test passanti
 
@@ -1500,6 +1787,9 @@ Per ogni PR, il Code Review Agent verifica:
 
 **Copy e vincoli tema**
 - Nessuna frase che inizia con "dovresti", "ti consiglio", "è meglio che" o simili
+- Nessuna frase che orienti l'utente verso un'azione, nemmeno implicitamente: «usa X di notte»,
+  «è il numero da confrontare», «conviene». Il filtro sulle formule esplicite non basta —
+  il criterio è **descrivere il meccanismo, non suggerire la mossa**
 - Ogni spiegazione ha le 3 varianti (`semplice`, `normale`, `tecnico`)
 - Gli importi numerici sono sempre esatti (`.toFixed(2)`)
 
@@ -1511,3 +1801,5 @@ Per ogni PR, il Code Review Agent verifica:
 **Test**
 - Per Issue #1: unit test passanti per `loanCalculator` e `AppContext`
 - Per Issue #6: build produzione senza warning
+- Per Issue #6: `src/App.jsx` non contiene più alcun componente segnaposto
+- Per Issue #6: `tests/integrazione.test.jsx` copre i 12 punti del demo flow e passa
