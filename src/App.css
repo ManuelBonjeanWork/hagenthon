@@ -1,20 +1,55 @@
 :root {
-  --color-primary: #2563eb;
-  --color-bg: #f8fafc;
+  /* Palette Accenture (docs/hagenthon-temi-sfida-2.html), adattata a fondo chiaro:
+     i toni chiari del brand (--color-primary-light, --color-rose) restano SOLO
+     decorativi (bordi, gradiente) perche' su bianco non reggono 4.5:1 come testo;
+     dove serve testo leggibile si usano le varianti scurite qui sotto. */
+  --color-primary: #A100FF;
+  --color-primary-rgb: 161, 0, 255;
+  --color-primary-strong: #8500D6;
+  --color-primary-deep: #460073;
+  --color-primary-light: #BE82FF;
+  --color-primary-tint: #F9F0FF;
+  --color-primary-border: var(--color-primary-light);
+  --color-ink: #0A0014;
+  --color-rose: #FF50A0;
+  --color-rose-strong: #DC0065;
+  --color-rose-bg: #FFF2F8;
+  --color-rose-border: var(--color-rose);
+
+  --color-positive-strong: #167F3D;
+  --color-positive-bg: #E5FFEF;
+  --color-positive-border: #4DCB7B;
+
+  --color-bg: #FBF8FD;
   --color-surface: #ffffff;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-zona-energia: #3b82f6;
-  --color-zona-potenza: #eab308;
-  --color-zona-oneri: #f97316;
-  --color-zona-trasporto: #ef4444;
-  --color-zona-imposte: #8b5cf6;
-  --radius: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --color-text: var(--color-ink);
+  --color-text-muted: #77688A;
+  --color-border: #E6DEEF;
+
+  /* Voci della bolletta: 5 tinte lontane dal viola primario e tra loro
+     distinguibili anche a bordo di 4px (vedi BillVoce/ExplanationPanel). */
+  --color-zona-energia: #2F6FE0;
+  --color-zona-potenza: #8D6A00;
+  --color-zona-oneri: #D2540E;
+  --color-zona-trasporto: #DC2F4E;
+  --color-zona-imposte: #0D8A76;
+
+  --color-chart-capitale: #2F6FE0;
+  --color-chart-interessi: var(--color-rose-strong);
+
+  --radius-lg: 18px;
+  --radius: 12px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 3px rgba(10, 0, 20, 0.08);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, sans-serif; background: var(--color-bg); color: var(--color-text); }
+body {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
 .app { min-height: 100vh; display: flex; flex-direction: column; }
 .main-content { flex: 1; padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%; }
-button { cursor: pointer; }
+button { cursor: pointer; font-family: inherit; }

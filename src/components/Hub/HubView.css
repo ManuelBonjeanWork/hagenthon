@@ -1,8 +1,16 @@
 .hub { text-align: center; padding: 48px 24px; }
-.hub-title { font-size: 2rem; font-weight: 700; margin-bottom: 40px; }
+/* Gradiente sul titolo dell'hub, con parsimonia: e' l'unico testo dell'app che lo usa.
+   Va da --color-primary a --color-primary-deep (non --color-primary-light) perche'
+   ogni tratto del gradiente deve restare leggibile da solo: entrambi gli estremi
+   passano 4.5:1 su fondo chiaro, --color-primary-light da solo no (misurato 2.68:1). */
+.hub-title {
+  font-size: 2rem; font-weight: 700; margin-bottom: 40px; letter-spacing: -0.02em;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-deep));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
 .hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto; }
-.situation-card { background: var(--color-surface); border: 2px solid var(--color-border); border-radius: 16px; padding: 32px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; transition: all 0.2s; text-align: center; }
-.situation-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 12px rgba(37,99,235,0.15); transform: translateY(-2px); }
+.situation-card { background: var(--color-surface); border: 2px solid var(--color-border); border-radius: var(--radius-lg); padding: 32px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; transition: all 0.2s; text-align: center; }
+.situation-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.15); transform: translateY(-2px); }
 .card-emoji { font-size: 2.5rem; }
-.card-titolo { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
+.card-titolo { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; color: var(--color-text); }
 .card-desc { font-size: 0.9rem; color: var(--color-text-muted); }

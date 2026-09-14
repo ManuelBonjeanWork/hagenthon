@@ -37,8 +37,8 @@ export default function SimulationPanel() {
   const diff = totale - TOTALE_BOLLETTA
   return (
     <div className="simulation-panel">
-      <h3 className="sim-title">💡 Cosa succederebbe se cambiassi i tuoi consumi?</h3>
-      <p className="sim-subtitle">Muovi i cursori — il calcolo si aggiorna subito. Il sistema mostra solo la matematica.</p>
+      <h3 className="sim-title">💡 Come cambia il totale al variare dei parametri?</h3>
+      <p className="sim-subtitle">Muovi i cursori: il calcolo si aggiorna in tempo reale.</p>
       <div className="sim-controls">
         <label className="sim-label">Consumo mensile: <strong>{consumo} kWh</strong>
           <input type="range" min={50} max={400} step={10} value={consumo} onChange={e => setConsumo(Number(e.target.value))} className="sim-slider" />
@@ -57,7 +57,7 @@ export default function SimulationPanel() {
         </div>
       </div>
       <div className={`sim-result ${diff < 0 ? 'risparmio' : 'aumento'}`}>
-        <div className="result-row"><span>Con queste scelte:</span><strong>€{totale.toFixed(2)}</strong></div>
+        <div className="result-row"><span>Con questi parametri:</span><strong>€{totale.toFixed(2)}</strong></div>
         <div className="result-row muted"><span>di cui imponibile:</span><span>€{imponibile.toFixed(2)}</span></div>
         <div className="result-row muted"><span>di cui IVA 10%:</span><span>€{iva.toFixed(2)}</span></div>
         <div className="result-row muted"><span>Bolletta di esempio:</span><span>€{TOTALE_BOLLETTA.toFixed(2)}</span></div>

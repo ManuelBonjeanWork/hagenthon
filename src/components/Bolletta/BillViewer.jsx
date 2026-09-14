@@ -15,7 +15,7 @@ export default function BillViewer() {
         ))}
       </div>
       <div className="bill-totale"><span>TOTALE DA PAGARE</span><span className="totale-importo">€{TOTALE_BOLLETTA.toFixed(2)}</span></div>
-      <p className="bill-hint">👆 Clicca su una voce per capire cosa significa</p>
+      <p className="bill-hint">Seleziona una voce per leggere la spiegazione</p>
     </div>
   )
 }
