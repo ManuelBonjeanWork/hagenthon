@@ -537,11 +537,13 @@ Ogni agente ha un perimetro educativo preciso e non può uscire dal proprio domi
 **Stack:** Claude API con tool use → JSON schema delle voci bolletta
 
 #### 🗣️ Language Adapter Agent
-**Trigger:** l'utente chiede una spiegazione con parole diverse o fa una domanda libera su una voce  
-**Compito:** genera una spiegazione contestuale al livello corrente per quel termine specifico  
-**Output:** testo nella ExplanationPanel, in aggiunta (non in sostituzione) al contenuto pre-scritto  
-**Vincolo:** risponde solo su termini/voci del documento attivo, rifiuta domande su investimenti o prodotti  
-**Stack:** Claude API con system prompt ristretto + contesto della voce attiva
+**Trigger (BollettaRoom):** l'utente chiede una spiegazione con parole diverse o fa una domanda libera su una voce della bolletta  
+**Trigger (RataRoom):** l'utente fa una domanda libera sul grafico di ammortamento (es. "perché nei primi mesi pago più interessi?", "cosa significa debito residuo?")  
+**Trigger (SimulationPanel):** l'utente clicca il nudge contestuale *"Vuoi capire come è calcolato questo risparmio?"* che appare dopo ogni ricalcolo — l'agente si attiva con il contesto della simulazione precaricato; nessuna risposta automatica senza input dell'utente  
+**Compito:** genera una spiegazione contestuale al livello corrente per la domanda posta, usando come contesto il documento/scenario attivo  
+**Output:** testo in un panel di risposta, in aggiunta (non in sostituzione) al contenuto pre-scritto  
+**Vincolo:** risponde solo su termini e calcoli del documento/scenario attivo; rifiuta domande su investimenti, prodotti o consigli finanziari  
+**Stack:** Claude API con system prompt ristretto + contesto della room attiva (voce selezionata / parametri rata / valori slider)
 
 #### 📖 Glossary Enricher Agent
 **Trigger:** l'utente cerca nel glossario un termine non presente nel dataset pre-costruito  
@@ -549,13 +551,6 @@ Ogni agente ha un perimetro educativo preciso e non può uscire dal proprio domi
 **Output:** nuova voce nel GlossaryPanel, marcata come "generata" vs "verificata"  
 **Vincolo:** genera solo definizioni di termini finanziari generici, non valutazioni su prodotti specifici  
 **Stack:** Claude API + cache locale delle definizioni generate per non ripetere chiamate
-
-#### 🔄 Document Comparison Agent
-**Trigger:** l'utente carica due bollette (es. mese corrente vs mese precedente)  
-**Compito:** confronta voce per voce, identifica variazioni significative, le evidenzia  
-**Output:** vista "diff" sovrapposta alla BollettaRoom con delta colorati per ogni voce  
-**Vincolo:** mostra solo variazioni fattuali ("+€3.20 su quota energia"), non giudica se è normale o no  
-**Stack:** Claude API con due documenti in contesto → output diff strutturato
 
 #### 🧭 Onboarding Guide Agent
 **Trigger:** primo accesso o clic su "Non so da dove iniziare"  
@@ -574,11 +569,15 @@ Utente
   ▼
 Frontend React (MVP deterministico)
   │
-  ├─── Document Parser Agent ──→ JSON voci → BillViewer
-  ├─── Language Adapter Agent ──→ testo → ExplanationPanel
-  ├─── Glossary Enricher Agent ──→ definizione → GlossaryPanel
-  ├─── Document Comparison Agent ──→ diff → BollettaRoom overlay
-  └─── Onboarding Guide Agent ──→ view suggerita + livello iniziale
+  ├─── Document Parser Agent ──────→ JSON voci → BillViewer
+  │
+  ├─── Language Adapter Agent ─────→ BollettaRoom: testo → ExplanationPanel
+  │                                  RataRoom: risposta → panel domanda
+  │                                  SimulationPanel: risposta → panel (su nudge utente)
+  │
+  ├─── Glossary Enricher Agent ────→ definizione → GlossaryPanel
+  │
+  └─── Onboarding Guide Agent ─────→ view suggerita + livello iniziale
 ```
 
 Ogni agente è stateless e isolato — non condividono contesto tra loro. Il frontend rimane la fonte di verità per navigazione e stato.
@@ -589,6 +588,7 @@ Ogni agente è stateless e isolato — non condividono contesto tra loro. Il fro
 - Card "Estratto conto bancario" — spiegazione di commissioni, movimenti, saldo disponibile vs contabile
 - Card "Busta paga" — capire netto vs lordo, trattenute, TFR
 - Card "Contratto di affitto" — deposito cauzionale, adeguamento ISTAT, spese condominiali
+- **Document Comparison Agent** — confronto voce per voce tra due bollette (mese corrente vs precedente); mostra delta colorati senza giudicare se le variazioni siano normali o meno
 
 ### Fase 4 — Percorso adattivo
 - Rilevamento del livello di alfabetizzazione tramite micro-quiz iniziale
