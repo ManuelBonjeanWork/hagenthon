@@ -432,91 +432,7 @@ Agenti rivolti agli sviluppatori — operano offline, in fase di sviluppo e manu
 
 ---
 
-#### Convenzione documenti generati
-
-Tutti i documenti prodotti dagli agenti durante il ciclo di sviluppo (spec funzionale, design doc, piano di implementazione) vengono salvati dentro il repository nella cartella `docs/`, seguendo questa struttura:
-
-```
-docs/
-├── superpowers/
-│   └── specs/              ← design doc architetturali (es. questo file)
-├── features/
-│   └── <issue-id>-<slug>/  ← tutti i doc generati per una feature specifica
-│       ├── functional-spec.md
-│       ├── design.md
-│       └── implementation-plan.md
-└── adr/                    ← Architecture Decision Records (generati dal Code Review Agent)
-```
-
-Il GitHub PM Agent crea la cartella `docs/features/<issue-id>-<slug>/` al momento della creazione della feature branch, e ogni agente salva i propri output lì. Alla chiusura dell'Issue, la cartella diventa documentazione permanente della feature.
-
----
-
-#### Agentic SDLC Pipeline
-
-Pipeline completo per lo sviluppo di nuove feature, con GitHub come unico canale di coordinamento tra agenti. Ogni cambio di stato aggiorna il GitHub Project item — nessun canale parallelo, tutto tracciato.
-
-```
-Requisito (testo libero o Issue esistente)
-   │
-   ▼
-① GitHub PM Agent ── crea GitHub Issue + Project item [status: "Analisi"]
-   │                  crea cartella docs/features/<issue-id>-<slug>/
-   │
-   ▼
-② Analyst Agent ───── legge l'Issue
-   │                  fa domande di chiarimento via commenti sull'Issue
-   │                  genera:
-   │                    - functional-spec.md  → docs/features/<id>/functional-spec.md
-   │                    - design.md           → docs/features/<id>/design.md
-   │                    - implementation-plan.md → docs/features/<id>/implementation-plan.md
-   │                  posta link ai documenti come commento sull'Issue
-   │                  [status: "In Revisione Spec"]
-   │
-   ▼
-⛔ GATE UMANO ──────── developer legge spec + piano su GitHub
-   │                  approva aggiungendo label "spec-approved"
-   │                  oppure chiede modifiche via commento → torna a ②
-   │
-   ▼
-③ GitHub PM Agent ── crea feature branch `feature/<issue-id>-<slug>`
-   │                  [status: "In Sviluppo"]
-   │
-   ▼
-④ Developer Agent ── legge spec + piano dai file in docs/features/<id>/
-   │                  implementa la feature su feature branch
-   │                  scrive unit test
-   │                  committa e posta commento sull'Issue con summary
-   │                  [status: "In Code Review"]
-   │
-   ▼
-⑤ Code Review Agent ── analizza diff della feature branch
-   │                    posta commenti inline sulla PR (o sull'Issue se PR non ancora aperta)
-   │                    se KO → aggiunge label "needs-fixes" → torna a ④
-   │                    se OK → [status: "In Test E2E"]
-   │
-   ▼
-⑥ Tester Agent ──────── legge feature branch + functional-spec.md
-   │                     crea o modifica test Playwright in e2e/
-   │                     salva log di esecuzione in docs/features/<id>/test-report.md
-   │                     se FAIL → aggiunge label "needs-fixes" + commento con log → torna a ④
-   │                     se PASS → [status: "Pronto al Merge"]
-   │
-   ▼
-⑦ GitHub PM Agent ── apre PR dalla feature branch verso main
-   │                  corpo PR include: link all'Issue, link ai doc, summary test
-   │                  chiude Issue a merge avvenuto (via "Closes #N" nel corpo PR)
-   │                  [status: "Done"]
-```
-
-**Strumenti GitHub utilizzati:**
-- **GitHub Issues** — requisiti, domande Analyst, approvazioni, log Tester
-- **GitHub Projects** — Project item con status board per tracciare ogni feature nel pipeline
-- **GitHub Pull Requests** — aperte dal GitHub PM Agent, corpo auto-generato
-- **GitHub Labels** — `spec-approved`, `needs-fixes`, `in-review`, `e2e-passed` per coordinare i passaggi
-- **GitHub Branches** — create dal GitHub PM Agent con naming convention `feature/<issue-id>-<slug>`
-
-**Principio di isolamento:** ogni agente conosce solo il proprio step. Il contesto si passa attraverso i file in `docs/features/` e i commenti sull'Issue — non esiste comunicazione diretta tra agenti.
+> 📌 **L'Orchestrator Agent e l'Agentic SDLC Pipeline non sono roadmap futura — sono il metodo con cui FinanzaChiara viene costruita adesso.** Vedere **Sezione 12** per il design completo del pipeline, il grafo delle dipendenze e la timeline di sviluppo.
 
 ---
 
@@ -596,12 +512,104 @@ Ogni agente è stateless e isolato — non condividono contesto tra loro. Il fro
 
 ---
 
-## 12. Priorità di sviluppo (5 ore, 2 persone)
+## 12. Come costruiamo: Agentic SDLC Pipeline
 
-| Ora | Persona A | Persona B |
-|-----|-----------|-----------|
-| 0–1 | Setup Vite + struttura file + Context | Data layer: `bolletta.js` + `glossario.js` |
-| 1–2 | Header + LevelSelector + HubView | BillViewer (layout bolletta interattiva) |
-| 2–3 | ExplanationPanel + collegamento Context | SimulationPanel (slider + calcoli) |
-| 3–4 | GlossaryPanel (slide-in + search) | RataRoom (form + LoanVisualizer + grafico) |
-| 4–5 | Link bidirezionali Glossario ↔ Bolletta + polish UI | Test cross-browser + fix bug + demo flow |
+FinanzaChiara viene costruita usando il pipeline agentico come metodo di sviluppo primario — non solo come roadmap futura. L'**Orchestrator Agent** coordina tutto; l'umano approva solo ai gate.
+
+### Orchestrator Agent
+
+Cervello del pipeline. Unico agente con visione del grafo delle dipendenze. Tutti gli altri agenti sono stateless — solo l'Orchestrator sa cosa viene prima e dopo.
+
+**Avvio:** invocato una volta dall'umano con il plan doc come input.  
+**Compito:**
+1. Estrae il grafo delle dipendenze dal piano
+2. Monitora GitHub Projects API per i cambi di status
+3. Quando le dipendenze di un'Issue sono "Done" → dispatcha Developer Agent (worktree isolato)
+4. **Issue indipendenti vengono dispatchate in parallelo** — più Developer Agent simultaneamente
+5. Developer Agent completo → dispatcha Code Review Agent
+6. Code Review approva → dispatcha GitHub PM Agent → PR
+7. Notifica l'umano **solo** ai gate di approvazione
+8. Fallimento → riprova una volta, poi notifica con log
+
+**Stato persistente:** `docs/pipeline-state.json` — permette ripresa in caso di interruzione.
+
+---
+
+### 6 Issue e grafo delle dipendenze
+
+```
+Issue #1: Setup + AppContext + Data Layer   ← SEQUENZIALE (fondazione)
+              │
+    ┌─────────┼──────────┬──────────┐
+    ▼         ▼          ▼          ▼
+ Issue #2  Issue #3   Issue #4   Issue #5   ← PARALLELI (Orchestrator lancia 4 agenti)
+ Header    Bolletta   Glossario  RataRoom
+ HubView   Room       Panel
+    └─────────┴──────────┴──────────┘
+              │
+              ▼
+         Issue #6: Integrazione + polish + build   ← SEQUENZIALE (finale)
+```
+
+| Issue | Contenuto | Dipende da | Agenti in gioco |
+|-------|-----------|-----------|----------------|
+| #1 | Setup + AppContext + Data Layer | — | Developer → Code Review → PM |
+| #2 | Header + HubView | #1 | Developer → Code Review → PM |
+| #3 | BollettaRoom completa | #1 | Developer → Code Review → PM |
+| #4 | GlossaryPanel | #1 | Developer → Code Review → PM |
+| #5 | RataRoom | #1 | Developer → Code Review → PM |
+| #6 | Integrazione + polish + E2E | #2 #3 #4 #5 | Developer → Code Review → Tester → PM |
+
+---
+
+### Timeline con agenti paralleli
+
+| Fase | Agenti attivi | Tempo stimato |
+|------|--------------|--------------|
+| Setup pipeline | Orchestrator + GitHub PM Agent (crea repo, board, 6 Issue) | ~25 min |
+| Issue #1 | 1 Developer Agent sequenziale | ~40 min |
+| Issue #2+3+4+5 | 4 Developer Agent in parallelo | ~55 min (limitato da #3) |
+| Code Review paralleli | 4 Code Review Agent in parallelo | ~15 min |
+| PR merge paralleli | GitHub PM Agent (sequenziale per sicurezza) | ~10 min |
+| Issue #6 | Developer + Tester Agent | ~30 min |
+| **Totale** | | **~2h55min** |
+
+Rimangono ~2 ore per debugging, demo prep e presentazione.
+
+---
+
+### Ciclo per ogni Issue
+
+```
+Orchestrator dispatcha Developer Agent (worktree git isolato)
+    │
+    ▼
+Developer Agent
+    ├── legge docs/features/<id>/ + sezione rilevante del design doc
+    ├── implementa feature + unit test
+    ├── committa su feature branch
+    └── notifica Orchestrator → "done"
+    │
+    ▼
+Code Review Agent
+    ├── analizza diff della feature branch
+    ├── posta commenti inline se necessario
+    └── approva o richiede fix → torna a Developer Agent
+    │
+    ▼
+GitHub PM Agent
+    ├── apre PR feature branch → main
+    ├── aggiorna Project item → "Pronto al Merge"
+    └── ⛔ GATE UMANO: merge manuale dopo review PR
+    │
+    ▼ (solo Issue #6)
+Tester Agent
+    ├── verifica happy path manualmente (no Playwright in MVP)
+    └── segnala problemi → Orchestrator → Developer Agent
+```
+
+---
+
+### Cosa rimane al piano di implementazione
+
+Il file `docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md` contiene il codice completo per ogni Issue. Il Developer Agent lo legge come contesto per implementare correttamente ogni feature.
