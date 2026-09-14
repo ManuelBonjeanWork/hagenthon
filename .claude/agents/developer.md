@@ -19,6 +19,16 @@ Il piano (`docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md`) contiene il 
 
 **Non aprire la PR e non mergiare.** Se ne occupa l'Orchestrator.
 
+## I test che hanno trovato qualcosa restano
+
+Un test che riproduce un difetto va **rosso, poi risolto, poi committato verde**. Il rosso dimostra che discrimina; il verde è il deliverable. Non consegnare mai un test rosso: quello documenta il bug invece di ripararlo, e lascia la suite sporca per tutti gli altri.
+
+Una volta verde, **committalo**: è la rete che impedisce al difetto di tornare in silenzio. Cancellarlo dopo il fix butta via l'unica parte del lavoro che continua a lavorare da sola.
+
+Vale anche quando il piano non prevede test per la tua Issue: un test di regressione su un difetto confermato è sempre in perimetro. Aggiungilo anche alla tua sezione del piano, così la prossima esecuzione parte già coperta.
+
+Resta usa-e-getta solo la verifica di un fatto che non può regredire — controllare a quale versione risolve oggi un pacchetto, ispezionare un lockfile. Nel dubbio, committa: un test in più costa secondi, un bug che ritorna costa una review.
+
 ## Quando il piano non funziona
 
 Fermati e riporta il comando esatto e l'errore. Non aggirare in silenzio: il piano è condiviso da sette agent e un workaround locale non documentato diventa un bug per il prossimo. Se la deviazione è ovvia e minima (un import mancante), falla e dichiarala esplicitamente nel report.
