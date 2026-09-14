@@ -1075,8 +1075,8 @@ export default function ExplanationPanel() {
       </div>
       <div className="exp-barra">
         <div className="barra-fill" style={{ width: `${pct}%`, background: colore }} />
-        <span className="barra-pct">{pct}% della bolletta</span>
       </div>
+      <span className="barra-pct">{pct}% della bolletta</span>
       <p className="exp-testo">{activeVoce.spiegazione[currentLevel]}</p>
       {activeVoce.terminiGlossario?.length > 0 && (
         <div className="exp-termini">
@@ -1101,9 +1101,11 @@ export default function ExplanationPanel() {
 .exp-header { display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid; padding-left: 12px; margin-bottom: 16px; }
 .exp-label { font-size: 1rem; font-weight: 600; }
 .exp-importo { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.exp-barra { position: relative; background: var(--color-bg); border-radius: 4px; height: 8px; margin-bottom: 8px; }
+/* La didascalia sta FUORI dalla barra: dentro, con height 8px fissa, traboccava
+   e finiva sopra il paragrafo. */
+.exp-barra { background: var(--color-bg); border-radius: 4px; height: 8px; overflow: hidden; }
 .barra-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-.barra-pct { font-size: 0.75rem; color: var(--color-text-muted); }
+.barra-pct { display: block; margin-top: 6px; font-size: 0.75rem; color: var(--color-text-muted); }
 .exp-testo { margin-top: 16px; line-height: 1.6; font-size: 0.95rem; }
 .exp-termini { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border); }
 .termini-label { font-size: 0.8rem; color: var(--color-text-muted); display: block; margin-bottom: 8px; }

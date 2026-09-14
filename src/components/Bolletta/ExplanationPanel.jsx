@@ -29,8 +29,8 @@ export default function ExplanationPanel() {
       </div>
       <div className="exp-barra">
         <div className="barra-fill" style={{ width: `${pct}%`, background: colore }} />
-        <span className="barra-pct">{pct}% della bolletta</span>
       </div>
+      <span className="barra-pct">{pct}% della bolletta</span>
       <p className="exp-testo">{activeVoce.spiegazione[currentLevel]}</p>
       {activeVoce.terminiGlossario?.length > 0 && (
         <div className="exp-termini">
