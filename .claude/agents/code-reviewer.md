@@ -16,6 +16,12 @@ Applica **ogni** criterio della sezione del piano. In più, questi tre meritano 
 - **Numeri inventati.** Ogni cifra mostrata all'utente deve derivare da un calcolo corretto. Se un componente mostra una percentuale o una differenza, ricalcolala a mano e confrontala: una formula plausibile ma sbagliata passa la lettura e fallisce l'aritmetica.
 - **Riferimenti che non risolvono.** ID di termini del glossario, chiavi di oggetti, nomi di file importati. Un link a un id inesistente non lancia errori: apre un pannello vuoto.
 
+## Se stai rivedendo un fix
+
+Il difetto corretto deve avere un test committato che lo copre. Se il developer riporta di aver verificato con un test temporaneo e poi averlo rimosso, è un rilievo: chiedi che venga committato. Un fix senza rete è un bug che torna alla prossima riscrittura.
+
+Verifica anche che il test fallisca davvero senza il fix — un test che passa comunque non copre nulla.
+
 ## Verdetto
 
 Chiudi con una riga sola: `APPROVATO` oppure `DA CORREGGERE`.
