@@ -1,15 +1,15 @@
 /* ExplanationPanel.css */
-.explanation-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; min-height: 200px; }
+.explanation-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 24px; min-height: 200px; }
 .explanation-panel.empty { display: flex; align-items: center; justify-content: center; }
 .empty-msg { color: var(--color-text-muted); font-size: 0.95rem; text-align: center; }
 .exp-header { display: flex; justify-content: space-between; align-items: flex-start; border-left: 4px solid; padding-left: 12px; margin-bottom: 16px; }
-.exp-label { font-size: 1rem; font-weight: 600; }
+.exp-label { font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; }
 .exp-importo { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.exp-barra { position: relative; background: var(--color-bg); border-radius: 4px; height: 8px; margin-bottom: 8px; }
+.exp-barra { position: relative; background: var(--color-primary-tint); border-radius: 4px; height: 8px; margin-bottom: 8px; }
 .barra-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
 .barra-pct { font-size: 0.75rem; color: var(--color-text-muted); }
 .exp-testo { margin-top: 16px; line-height: 1.6; font-size: 0.95rem; }
 .exp-termini { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border); }
 .termini-label { font-size: 0.8rem; color: var(--color-text-muted); display: block; margin-bottom: 8px; }
 .termini-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.termine-link { background: none; border: 1px solid var(--color-primary); color: var(--color-primary); border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; text-transform: capitalize; }
+.termine-link { background: none; border: 1px solid var(--color-primary); color: var(--color-primary); border-radius: var(--radius-pill); padding: 4px 12px; font-size: 0.8rem; text-transform: capitalize; }

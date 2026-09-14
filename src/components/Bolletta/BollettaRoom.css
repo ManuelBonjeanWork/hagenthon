@@ -1,6 +1,6 @@
 /* BollettaRoom.css */
 .bolletta-room { display: flex; flex-direction: column; gap: 24px; }
 .back-btn { align-self: flex-start; background: none; border: none; color: var(--color-primary); font-size: 0.9rem; padding: 0; }
-.room-title { font-size: 1.5rem; font-weight: 700; }
+.room-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
 .bolletta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media (max-width: 768px) { .bolletta-grid { grid-template-columns: 1fr; } }
