@@ -32,7 +32,7 @@ Entrambi gli scenari sono **educativi e non consulenziali**: il sistema non dice
 - **Backend:** nessuno
 - **AI:** nessuna nell'MVP — prevista nella roadmap futura per parsing di bollette reali
 - **Dipendenze esterne:** nessuna API key necessaria
-- **Charting:** SVG custom o Recharts (leggero, già compatibile con React)
+- **Charting:** Recharts (leggero, React-native, documentazione eccellente — nessun SVG custom)
 
 ### Struttura dell'applicazione
 
