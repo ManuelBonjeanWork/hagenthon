@@ -348,6 +348,90 @@ Spiegazione contestuale sotto il grafico, al livello corrente.
 
 ## 11. Roadmap Futura (post-hackathon)
 
+### Toolchain Agentici per il Team
+
+Agenti rivolti agli sviluppatori — operano offline, in fase di sviluppo e manutenzione, mai a contatto con i dati degli utenti finali. Zero tracking, privacy by design.
+
+#### Area 1 — Manutenzione Contenuti
+
+##### 🔔 Regulatory Monitor Agent
+**Trigger:** cron periodico su fonti ufficiali (ARERA, Gazzetta Ufficiale, MEF)  
+**Compito:** rileva variazioni normative (tariffe, aliquote, sigle, delibere) e le mappa alle voci impattate nel data layer  
+**Output:** PR automatica con modifiche proposte a `data/bolletta.js` e `data/glossario.js`, con link alla fonte ufficiale come commento  
+**Revisione:** un developer approva la PR prima del merge — nessun aggiornamento automatico al contenuto finanziario  
+
+##### 🔍 Semantic Lint Agent
+**Trigger:** ogni PR che tocca `data/`  
+**Compito:** analizza ogni spiegazione e verifica:
+- il livello "semplice" non usa termini tecnici non definiti nel glossario
+- il livello "tecnico" è preciso e coerente con le fonti normative
+- i `terminiGlossario` di ogni voce esistono effettivamente in `glossario.js`
+- non ci sono contraddizioni tra i tre livelli della stessa voce
+
+**Output:** commento inline sulla PR con i problemi trovati, severity alta/media/bassa
+
+##### ✅ Content CI Suite
+**Trigger:** CI su ogni PR che tocca `data/`  
+**Compito:** test automatici e misurabili sul contenuto:
+- **Indice Gulpease** per livello: "semplice" > 60, "normale" > 45, "tecnico" senza vincolo
+- lunghezza spiegazioni: "semplice" < 60 parole, "tecnico" < 120 parole
+- ogni voce ha almeno un termine in `terminiGlossario`
+- ogni `correlati` nel glossario punta a un `id` esistente
+
+**Output:** pass/fail in CI con report dettagliato per voce
+
+---
+
+#### Area 2 — Generazione Nuovi Scenari
+
+##### ⚙️ Scenario Generator Agent
+**Trigger:** developer carica uno o più documenti reali (PDF, immagine, testo) della tipologia da aggiungere  
+**Compito:** dialogo interattivo a turni —
+1. estrae automaticamente le voci dal documento reale
+2. propone la struttura dati (`id`, `label`, `importo`, `spiegazione` a 3 livelli, `terminiGlossario`)
+3. il developer corregge voce per voce
+4. l'agente apprende lo stile delle correzioni e migliora le proposte successive nella stessa sessione
+
+**Output:** file `data/<scenario>.js` pronto da revisionare e committare  
+**Vincolo:** le spiegazioni generate vengono marcate `"generated": true` fino alla revisione umana — la Content CI Suite le tratta come warning finché non vengono approvate
+
+---
+
+#### Area 3 — Pipeline di Sviluppo
+
+##### 🧱 Code Review Agent
+**Trigger:** PR con modifiche a `src/`  
+**Compito:** analizza le modifiche al codice e segnala:
+- componenti che violano il principio di responsabilità singola (file > 200 righe)
+- props mal definite o non tipizzate
+- accesso diretto al Context fuori dai componenti previsti
+- pattern non coerenti con l'architettura Hub & Rooms definita nel design doc
+
+**Output:** commento inline sulla PR, non bloccante — advisory
+
+##### 📝 Content Review Agent
+**Trigger:** PR con modifiche a `data/`  
+**Compito:** complementare al Semantic Lint, si concentra su:
+- coerenza dello stile narrativo tra voci diverse (stesso tono nel livello "semplice")
+- formule matematiche nei commenti del data layer verificate algebricamente
+- nuovi termini aggiunti non già presenti con nome diverso nel glossario (deduplicazione)
+
+**Output:** commento inline sulla PR
+
+##### 🎭 E2E Generator Agent
+**Trigger:** nuovo componente, nuovo flusso utente, o nuova card scenario aggiunta  
+**Compito:** legge il design doc e la struttura dei componenti React, genera test Playwright per tutti i flussi critici:
+- click su voce bolletta → ExplanationPanel aggiornato
+- slider SimulationPanel → totale ricalcolato correttamente
+- LevelSelector → tutti i testi della pagina aggiornati al nuovo livello
+- navigazione Hub → BollettaRoom → Hub
+- apertura GlossaryPanel da header, da link inline, da card Hub
+- calcolo rata: input modificato → output aggiornato istantaneamente
+
+**Output:** file `e2e/<scenario>.spec.ts` pronto da revisionare; i developer lo possiedono da lì in poi
+
+---
+
 ### Fase 2 — AI Layer
 - **Upload bolletta reale** → AI (Claude) estrae le voci e i valori → alimenta BillViewer con i dati reali dell'utente
 - **Parsing testo incollato** → stesso flusso per bollette digitali
