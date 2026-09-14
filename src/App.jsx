@@ -1,14 +1,26 @@
-// Shell autonoma. Verrà riscritta da capo in Issue #6.1 con i componenti reali
-// di #1a, #2, #3, #4, #5. Fino ad allora non dipende da nulla che non esista già.
+import { AppProvider, useApp } from './context/AppContext'
+import Header from './components/Header/Header'
+import HubView from './components/Hub/HubView'
+import BollettaRoom from './components/Bolletta/BollettaRoom'
+import RataRoom from './components/Rata/RataRoom'
+import GlossaryPanel from './components/Glossario/GlossaryPanel'
 import './App.css'
 
-export default function App() {
+function AppContent() {
+  const { activeView } = useApp()
   return (
     <div className="app">
-      <header className="header"><span>💡 FinanzaChiara</span></header>
+      <Header />
       <main className="main-content">
-        <p>Shell iniziale. I componenti arrivano da Issue #1a, #2, #3, #4, #5.</p>
+        {activeView === 'hub' && <HubView />}
+        {activeView === 'bolletta' && <BollettaRoom />}
+        {activeView === 'rata' && <RataRoom />}
       </main>
+      <GlossaryPanel />
     </div>
   )
+}
+
+export default function App() {
+  return <AppProvider><AppContent /></AppProvider>
 }
