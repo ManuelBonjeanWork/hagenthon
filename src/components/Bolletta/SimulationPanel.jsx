@@ -67,8 +67,8 @@ export default function SimulationPanel() {
       </div>
       <p className="sim-nota">
         Come è calcolato: quota energia e accisa scalano con i kWh, la quota potenza con i kW,
-        oneri di sistema e trasporto restano fissi, l'IVA è il 10% dell'imponibile risultante.
-        Lo sconto per fascia (−5% sera, −15% notte) è un'ipotesi applicata alla sola quota energia.
+        oneri di sistema e trasporto restano fissi, l&apos;IVA è il 10% dell&apos;imponibile risultante.
+        Lo sconto per fascia (−5% sera, −15% notte) è un&apos;ipotesi applicata alla sola quota energia.
       </p>
     </div>
   )
