@@ -1,11 +1,17 @@
-export default function GlossarySearch({ value, onChange, autoFocus }) {
+import { forwardRef } from 'react'
+
+// Niente autoFocus: il focus alla ricerca lo da' GlossaryPanel in modo imperativo,
+// dentro lo stesso effect che cattura il focus precedente (vedi commento li').
+// Con autoFocus sul JSX, React lo applica in fase di commit prima che l'effect
+// giri, quindi la cattura prenderebbe questo input invece del trigger di apertura.
+const GlossarySearch = forwardRef(function GlossarySearch({ value, onChange }, ref) {
   return (
     <div className="glossary-search">
       <span className="search-icon" aria-hidden="true">🔍</span>
-      {/* autoFocus solo quando il pannello si apre "vuoto": se arriva da un link
-          su un termine, il focus deve restare su quel termine, non sulla ricerca. */}
-      <input type="search" aria-label="Cerca un termine nel glossario" placeholder="Cerca un termine..."
-        value={value} onChange={e => onChange(e.target.value)} className="search-input" autoFocus={autoFocus} />
+      <input ref={ref} type="search" aria-label="Cerca un termine nel glossario" placeholder="Cerca un termine..."
+        value={value} onChange={e => onChange(e.target.value)} className="search-input" />
     </div>
   )
-}
+})
+
+export default GlossarySearch
