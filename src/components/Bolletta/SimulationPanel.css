@@ -1,0 +1,19 @@
+/* SimulationPanel.css */
+.simulation-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; }
+.sim-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+.sim-subtitle { font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 24px; }
+.sim-controls { display: flex; flex-direction: column; gap: 20px; }
+.sim-label { display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; }
+.sim-slider { width: 100%; accent-color: var(--color-primary); }
+.fascia-group { display: flex; gap: 8px; }
+.fascia-btn { padding: 8px 16px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-bg); font-size: 0.875rem; }
+.fascia-btn.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+.sim-result { margin-top: 24px; padding: 16px 20px; border-radius: 10px; border: 2px solid; display: flex; flex-direction: column; gap: 8px; }
+.sim-result.risparmio { border-color: #22c55e; background: #f0fdf4; }
+.sim-result.aumento   { border-color: #ef4444; background: #fef2f2; }
+.result-row { display: flex; justify-content: space-between; font-size: 0.95rem; }
+.result-row.muted { color: var(--color-text-muted); font-size: 0.85rem; }
+.result-row.differenza { font-weight: 700; }
+.sim-nota { margin-top: 14px; font-size: 0.75rem; line-height: 1.5; color: var(--color-text-muted); }
+.sim-result.risparmio .differenza { color: #16a34a; }
+.sim-result.aumento   .differenza { color: #dc2626; }
