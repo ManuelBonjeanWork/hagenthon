@@ -25,8 +25,8 @@ export default function LoanVisualizer({ importo, durata, tasso }) {
           <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `€${v}`} />
           <Tooltip formatter={(v, name) => [formatEuro(v), name]} />
           <Legend />
-          <Bar dataKey="Capitale" stackId="a" fill="#3b82f6" name="Capitale" />
-          <Bar dataKey="Interessi" stackId="a" fill="#f97316" name="Interessi" radius={[4,4,0,0]} />
+          <Bar dataKey="Capitale" stackId="a" fill="var(--color-chart-capitale)" name="Capitale" />
+          <Bar dataKey="Interessi" stackId="a" fill="var(--color-chart-interessi)" name="Interessi" radius={[4,4,0,0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

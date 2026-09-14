@@ -2,7 +2,15 @@ import { useApp } from '../../context/AppContext'
 import { TOTALE_BOLLETTA } from '../../data/bolletta'
 import './ExplanationPanel.css'
 
-const COLORI = { energia: '#3b82f6', potenza: '#eab308', oneri: '#f97316', trasporto: '#ef4444', imposte: '#8b5cf6' }
+// Colori risolti via variabili CSS (vedi :root in App.css): cambiare il tema
+// del brand resta un'operazione in un punto solo, non richiede toccare questa mappa.
+const COLORI = {
+  energia: 'var(--color-zona-energia)',
+  potenza: 'var(--color-zona-potenza)',
+  oneri: 'var(--color-zona-oneri)',
+  trasporto: 'var(--color-zona-trasporto)',
+  imposte: 'var(--color-zona-imposte)',
+}
 
 export default function ExplanationPanel() {
   const { activeVoce, currentLevel, openGlossaryTerm } = useApp()
@@ -12,7 +20,7 @@ export default function ExplanationPanel() {
     </div>
   )
   const pct = ((activeVoce.importo / TOTALE_BOLLETTA) * 100).toFixed(1)
-  const colore = COLORI[activeVoce.colore] || '#94a3b8'
+  const colore = COLORI[activeVoce.colore] || 'var(--color-text-muted)'
   return (
     <div className="explanation-panel">
       <div className="exp-header" style={{ borderLeftColor: colore }}>
