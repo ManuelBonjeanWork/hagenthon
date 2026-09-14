@@ -4,7 +4,7 @@
 
 > **Spec:** `docs/superpowers/specs/2026-09-14-finanzachiara-design.md`
 
-**Goal:** Costruire l'MVP di FinanzaChiara in ~3 ore usando il pipeline agentico: Orchestrator Agent coordina 6 Issue, 4 delle quali eseguite in parallelo da Developer Agent indipendenti.
+**Goal:** Costruire l'MVP di FinanzaChiara in ~2h03min usando il pipeline agentico: Orchestrator Agent coordina 8 Issue (0, 1a, 1b, 2, 3, 4, 5, 6), con due finestre di parallelismo — AppContext+DataLayer e i 4 componenti UI — per ridurre al minimo la critical path.
 
 **Architecture:** React 18 + Vite 5 client-side. Stato globale via React Context. Navigazione tramite stato (no router). Contenuto finanziario pre-scritto in `data/`.
 
@@ -37,19 +37,33 @@
 ## Grafo delle dipendenze (per l'Orchestrator)
 
 ```
-Issue #1: Setup + AppContext + Data Layer
-              │  (SEQUENZIALE — fondazione di tutto)
-    ┌─────────┼──────────┬──────────┐
-    ▼         ▼          ▼          ▼
- Issue #2  Issue #3   Issue #4   Issue #5
- Header    Bolletta   Glossario  RataRoom
- HubView   Room       Panel
-    └─────────┴──────────┴──────────┘
-              │  (4 Developer Agent in PARALLELO)
-              ▼
-         Issue #6: Integrazione + polish + build
-                   (SEQUENZIALE — dopo tutti)
+Phase 0 (PARALLELO ~10 min):
+  Orchestrator legge piano  +  GitHub PM crea tutte le Issue
+        │
+        ▼
+Issue #0: Scaffolding (~8 min, SEQUENZIALE — il progetto Vite deve esistere)
+        │
+   ┌────┴────────────────────┐
+   ▼                         ▼
+Issue #1a (~15 min)       Issue #1b (~20 min)      ← PARALLELO
+AppContext.jsx             loanCalculator.js
++ test                     + bolletta.js
+                           + glossario.js
+                           + rata.js + test
+   └────┬────────────────────┘
+        │ (entrambe Done)
+   ┌────┼──────────┬──────────┐
+   ▼    ▼          ▼          ▼
+ #2   #3         #4          #5                    ← PARALLELO (~55 min)
+Header Bolletta  Glossario  RataRoom
+   └────┴──────────┴──────────┘
+        │  (tutte e 4 Done)
+        ▼
+   Issue #6: Integrazione + polish + build (~30 min, SEQUENZIALE)
 ```
+
+**Timeline ottimizzata:** ~10 + ~8 + ~20 + ~55 + ~30 = **~2h03min**
+(vs struttura precedente a 6 Issue: ~2h55min — risparmio ~50 min)
 
 ### Status board GitHub Projects
 
@@ -68,9 +82,11 @@ Issue #1: Setup + AppContext + Data Layer
 ---
 
 ## Phase 0 — Setup Pipeline
-**Orchestrator Agent (`claude-opus-5`) + GitHub PM Agent (`claude-haiku-4-5-20251001`) | ~25 min | Prima di tutto**
+**Orchestrator Agent (`claude-opus-5`) + GitHub PM Agent (`claude-haiku-4-5-20251001`) | ~10 min | PARALLELO**
 
-- [ ] **0.1 — Orchestrator legge il piano e inizializza lo stato**
+> **Orchestrator e GitHub PM Agent partono insieme:** il primo legge il piano e costruisce lo stato, il secondo crea repo e Issue. Non si aspettano a vicenda.
+
+- [ ] **0.1 — Orchestrator legge il piano e inizializza lo stato** *(in parallelo con 0.2–0.3)*
 
 ```json
 // docs/pipeline-state.json (creato dall'Orchestrator)
@@ -78,17 +94,19 @@ Issue #1: Setup + AppContext + Data Layer
   "session": "2026-09-14",
   "plan": "docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md",
   "issues": {
-    "1": { "status": "queued",  "deps": [],              "slug": "setup-appcontext-data" },
-    "2": { "status": "queued",  "deps": ["1"],           "slug": "header-hubview" },
-    "3": { "status": "queued",  "deps": ["1"],           "slug": "bollettaroom" },
-    "4": { "status": "queued",  "deps": ["1"],           "slug": "glossarypanel" },
-    "5": { "status": "queued",  "deps": ["1"],           "slug": "rataroom" },
-    "6": { "status": "queued",  "deps": ["2","3","4","5"], "slug": "integrazione-polish" }
+    "0":  { "status": "queued", "deps": [],                       "slug": "scaffolding" },
+    "1a": { "status": "queued", "deps": ["0"],                    "slug": "appcontext" },
+    "1b": { "status": "queued", "deps": ["0"],                    "slug": "data-layer" },
+    "2":  { "status": "queued", "deps": ["1a","1b"],              "slug": "header-hubview" },
+    "3":  { "status": "queued", "deps": ["1a","1b"],              "slug": "bollettaroom" },
+    "4":  { "status": "queued", "deps": ["1a","1b"],              "slug": "glossarypanel" },
+    "5":  { "status": "queued", "deps": ["1a","1b"],              "slug": "rataroom" },
+    "6":  { "status": "queued", "deps": ["2","3","4","5"],        "slug": "integrazione-polish" }
   }
 }
 ```
 
-- [ ] **0.2 — GitHub PM Agent crea repo e Projects board**
+- [ ] **0.2 — GitHub PM Agent crea repo e Projects board** *(in parallelo con 0.1)*
 
 ```bash
 gh repo create finanzachiara --public --clone
@@ -96,30 +114,51 @@ cd finanzachiara
 gh project create --title "FinanzaChiara MVP" --owner "@me"
 ```
 
-- [ ] **0.3 — GitHub PM Agent crea tutte e 6 le Issue**
+- [ ] **0.3 — GitHub PM Agent crea tutte e 8 le Issue** *(in parallelo con 0.1)*
 
 ```bash
-# Issue #1
+# Issue #0
 gh issue create \
-  --title "Setup + AppContext + Data Layer" \
+  --title "[#0] Scaffolding" \
   --body "## Contesto
-Fondazione del progetto. Tutte le altre Issue dipendono da questa.
-
-## Riferimenti
-- Design doc Sezione 4: Architettura Generale
-- Piano: Issue #1 in docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md
+Prima issue: crea la struttura del progetto Vite. Nessuna dipendenza.
+Issue #1a e #1b partono in parallelo dopo questa.
 
 ## Deliverable
-- Progetto Vite configurato con Vitest
-- AppContext con currentLevel, activeView, glossaryOpen, activeVoce
-- data/bolletta.js, data/glossario.js, data/rata.js
-- utils/loanCalculator.js con test passanti" \
+- Progetto Vite configurato (npm create vite)
+- Vitest configurato in vite.config.js
+- App.jsx shell (importa tutti i componenti futuri, non li implementa)
+- App.css con CSS variables
+- index.css reset" \
+  --label "queued"
+
+# Issue #1a
+gh issue create \
+  --title "[#1a] AppContext" \
+  --body "## Dipende da: Issue #0
+
+## Deliverable
+- src/context/AppContext.jsx
+- tests/AppContext.test.jsx (4 test passanti)" \
+  --label "queued"
+
+# Issue #1b
+gh issue create \
+  --title "[#1b] Data Layer" \
+  --body "## Dipende da: Issue #0
+
+## Deliverable
+- src/utils/loanCalculator.js
+- src/data/bolletta.js (6 voci a 3 livelli)
+- src/data/glossario.js (25 termini)
+- src/data/rata.js
+- tests/loanCalculator.test.js (4 test passanti)" \
   --label "queued"
 
 # Issue #2
 gh issue create \
-  --title "Header + HubView" \
-  --body "## Dipende da: Issue #1
+  --title "[#2] Header + HubView" \
+  --body "## Dipende da: Issue #1a e #1b (entrambe)
 
 ## Riferimenti
 - Design doc Sezione 5: Header e LevelSelector
@@ -133,8 +172,8 @@ gh issue create \
 
 # Issue #3
 gh issue create \
-  --title "BollettaRoom completa" \
-  --body "## Dipende da: Issue #1
+  --title "[#3] BollettaRoom" \
+  --body "## Dipende da: Issue #1a e #1b (entrambe)
 
 ## Riferimenti
 - Design doc Sezione 7: BollettaRoom
@@ -148,8 +187,8 @@ gh issue create \
 
 # Issue #4
 gh issue create \
-  --title "GlossaryPanel" \
-  --body "## Dipende da: Issue #1
+  --title "[#4] GlossaryPanel" \
+  --body "## Dipende da: Issue #1a e #1b (entrambe)
 
 ## Riferimenti
 - Design doc Sezione 9: GlossaryPanel
@@ -162,8 +201,8 @@ gh issue create \
 
 # Issue #5
 gh issue create \
-  --title "RataRoom" \
-  --body "## Dipende da: Issue #1
+  --title "[#5] RataRoom" \
+  --body "## Dipende da: Issue #1a e #1b (entrambe)
 
 ## Riferimenti
 - Design doc Sezione 8: RataRoom
@@ -176,8 +215,8 @@ gh issue create \
 
 # Issue #6
 gh issue create \
-  --title "Integrazione + polish + build" \
-  --body "## Dipende da: Issue #2, #3, #4, #5
+  --title "[#6] Integrazione + polish + build" \
+  --body "## Dipende da: Issue #2, #3, #4, #5 (tutte)
 
 ## Deliverable
 - Navigazione Hub ↔ BollettaRoom ↔ RataRoom funzionante
@@ -188,28 +227,25 @@ gh issue create \
   --label "queued"
 ```
 
-- [ ] **0.4 — Orchestrator monitora: nessuna dipendenza per Issue #1 → dispatcha Developer Agent #1**
+- [ ] **0.4 — Orchestrator attende fine Phase 0, poi dispatcha Developer Agent #0** *(nessuna dipendenza → prima issue pronta)*
 
 ---
 
-## Issue #1 — Setup + AppContext + Data Layer
-**Developer Agent #1 (`claude-sonnet-5`) | Sequenziale | ~40 min**
+## Issue #0 — Scaffolding
+**Developer Agent #0 (`claude-sonnet-5`) | Sequenziale | ~8 min**
 
-> **Orchestrator:** dispatcha questo agent appena il pipeline parte. Nessuna dipendenza.
+> **Orchestrator:** dispatcha appena Phase 0 è completa. Nessuna dipendenza. Al merge, dispatcha in parallelo Agent #1a e Agent #1b.
 
-**Branch:** `feature/1-setup-appcontext-data`
+**Branch:** `feature/0-scaffolding`
 
 **Files da creare:**
-- `src/App.jsx` · `src/App.css` · `src/index.css`
-- `src/context/AppContext.jsx`
-- `src/data/bolletta.js` · `src/data/glossario.js` · `src/data/rata.js`
-- `src/utils/loanCalculator.js`
-- `tests/setup.js` · `tests/AppContext.test.jsx` · `tests/loanCalculator.test.js`
-- `vite.config.js`
+- `vite.config.js` · `tests/setup.js`
+- `src/App.jsx` (shell — importa i componenti ma non li implementa)
+- `src/App.css` · `src/index.css`
 
 ---
 
-- [ ] **1.1 — Scaffolding**
+- [ ] **0.1 — Scaffolding**
 
 ```bash
 npm create vite@latest finanzachiara -- --template react
@@ -217,10 +253,10 @@ cd finanzachiara
 npm install
 npm install recharts
 npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
-git checkout -b feature/1-setup-appcontext-data
+git checkout -b feature/0-scaffolding
 ```
 
-- [ ] **1.2 — Configura Vitest in `vite.config.js`**
+- [ ] **0.2 — Configura Vitest in `vite.config.js`**
 
 ```js
 import { defineConfig } from 'vite'
@@ -232,13 +268,110 @@ export default defineConfig({
 })
 ```
 
-- [ ] **1.3 — Crea `tests/setup.js`**
+- [ ] **0.3 — Crea `tests/setup.js`**
 
 ```js
 import '@testing-library/jest-dom'
 ```
 
-- [ ] **1.4 — Scrivi test fallenti per AppContext**
+- [ ] **0.4 — Crea `src/App.jsx` (shell — segnaposto per i componenti)**
+
+```jsx
+// Shell: le implementazioni arrivano da Issue #1a, #2, #3, #4, #5
+// Il file verrà completato in Issue #6 (integrazione)
+import { AppProvider, useApp } from './context/AppContext'
+import './App.css'
+
+// Componenti non ancora implementati — placeholder
+function Header() { return <header className="header"><span>FinanzaChiara</span></header> }
+function HubView() { return <div>Hub</div> }
+function BollettaRoom() { return <div>Bolletta</div> }
+function RataRoom() { return <div>Rata</div> }
+function GlossaryPanel() { return null }
+
+function AppContent() {
+  const { activeView } = useApp()
+  return (
+    <div className="app">
+      <Header />
+      <main className="main-content">
+        {activeView === 'hub' && <HubView />}
+        {activeView === 'bolletta' && <BollettaRoom />}
+        {activeView === 'rata' && <RataRoom />}
+      </main>
+      <GlossaryPanel />
+    </div>
+  )
+}
+
+export default function App() {
+  return <AppProvider><AppContent /></AppProvider>
+}
+```
+
+- [ ] **0.5 — Crea `src/App.css`**
+
+```css
+:root {
+  --color-primary: #2563eb;
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-text: #1e293b;
+  --color-text-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-zona-energia: #3b82f6;
+  --color-zona-potenza: #eab308;
+  --color-zona-oneri: #f97316;
+  --color-zona-trasporto: #ef4444;
+  --color-zona-imposte: #8b5cf6;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: var(--color-bg); color: var(--color-text); }
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+.main-content { flex: 1; padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%; }
+button { cursor: pointer; }
+```
+
+- [ ] **0.6 — Crea `src/index.css`**
+
+```css
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+```
+
+- [ ] **0.7 — Commit e notifica Orchestrator**
+
+```bash
+git add -A
+git commit -m "feat(#0): scaffolding Vite + Vitest + App shell + CSS variables
+
+Closes #0
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git push origin feature/0-scaffolding
+```
+
+> **Orchestrator:** dopo merge di #0 → dispatcha in parallelo Developer Agent #1a e Developer Agent #1b
+
+---
+
+## Issue #1a — AppContext
+**Developer Agent #1a (`claude-sonnet-5`) | Parallelo con #1b | ~15 min**
+
+> **Orchestrator:** dispatcha insieme a Agent #1b non appena #0 è mergiata. Non dipende dal data layer.
+
+**Branch:** `feature/1a-appcontext`
+**Dipende da:** Issue #0 mergiata su main → `git checkout main && git pull && git checkout -b feature/1a-appcontext`
+
+**Files da creare:**
+- `src/context/AppContext.jsx`
+- `tests/AppContext.test.jsx`
+
+---
+
+- [ ] **1a.1 — Scrivi test fallenti**
 
 ```jsx
 // tests/AppContext.test.jsx
@@ -285,13 +418,13 @@ describe('AppContext', () => {
 })
 ```
 
-- [ ] **1.5 — Esegui test → verifica FAIL**
+- [ ] **1a.2 — Esegui test → verifica FAIL**
 
 ```bash
 npm run test -- tests/AppContext.test.jsx
 ```
 
-- [ ] **1.6 — Crea `src/context/AppContext.jsx`**
+- [ ] **1a.3 — Crea `src/context/AppContext.jsx`**
 
 ```jsx
 import { createContext, useContext, useState } from 'react'
@@ -342,7 +475,47 @@ export function useApp() {
 }
 ```
 
-- [ ] **1.7 — Scrivi test fallenti per loanCalculator**
+- [ ] **1a.4 — Esegui test → verifica PASS**
+
+```bash
+npm run test -- tests/AppContext.test.jsx
+```
+Atteso: 4 test PASS.
+
+- [ ] **1a.5 — Commit**
+
+```bash
+git add -A
+git commit -m "feat(#1a): AppContext con currentLevel, activeView, glossaryOpen, activeVoce
+
+- 4 unit test passanti
+
+Closes #1a
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git push origin feature/1a-appcontext
+```
+
+> **Orchestrator:** dopo merge di #1a e #1b (entrambe) → dispatcha in parallelo Developer Agent #2, #3, #4, #5
+
+---
+
+## Issue #1b — Data Layer
+**Developer Agent #1b (`claude-sonnet-5`) | Parallelo con #1a | ~20 min**
+
+> **Orchestrator:** dispatcha insieme a Agent #1a non appena #0 è mergiata. Non dipende da AppContext.
+
+**Branch:** `feature/1b-data-layer`
+**Dipende da:** Issue #0 mergiata su main → `git checkout main && git pull && git checkout -b feature/1b-data-layer`
+
+**Files da creare:**
+- `src/utils/loanCalculator.js`
+- `src/data/bolletta.js` · `src/data/glossario.js` · `src/data/rata.js`
+- `tests/loanCalculator.test.js`
+
+---
+
+- [ ] **1b.1 — Scrivi test fallenti per loanCalculator**
 
 ```js
 // tests/loanCalculator.test.js
@@ -379,7 +552,13 @@ describe('calcolaPianoAmmortamento', () => {
 })
 ```
 
-- [ ] **1.8 — Crea `src/utils/loanCalculator.js`**
+- [ ] **1b.2 — Esegui test → verifica FAIL**
+
+```bash
+npm run test -- tests/loanCalculator.test.js
+```
+
+- [ ] **1b.3 — Crea `src/utils/loanCalculator.js`**
 
 ```js
 export function calcolaRata(P, tassoAnnuo, mesi) {
@@ -405,7 +584,7 @@ export function formatEuro(n) {
 }
 ```
 
-- [ ] **1.9 — Crea `src/data/bolletta.js`**
+- [ ] **1b.4 — Crea `src/data/bolletta.js`**
 
 ```js
 export const TOTALE_BOLLETTA = 79.09
@@ -474,7 +653,7 @@ export const bollettaVoci = [
 ]
 ```
 
-- [ ] **1.10 — Crea `src/data/glossario.js`** (25 termini — contenuto completo nel design doc Sezione 9)
+- [ ] **1b.5 — Crea `src/data/glossario.js`** (25 termini — contenuto completo nel design doc Sezione 9)
 
 ```js
 // Struttura di ogni termine:
@@ -512,7 +691,7 @@ export const glossario = [
 ]
 ```
 
-- [ ] **1.11 — Crea `src/data/rata.js`**
+- [ ] **1b.6 — Crea `src/data/rata.js`**
 
 ```js
 export const rataContesti = {
@@ -528,94 +707,32 @@ export const TASSO_DEFAULT = 7.5
 export const DURATA_DEFAULT = 36
 ```
 
-- [ ] **1.12 — Crea `src/App.jsx`**
-
-```jsx
-import { AppProvider, useApp } from './context/AppContext'
-import Header from './components/Header/Header'
-import HubView from './components/Hub/HubView'
-import BollettaRoom from './components/Bolletta/BollettaRoom'
-import RataRoom from './components/Rata/RataRoom'
-import GlossaryPanel from './components/Glossario/GlossaryPanel'
-import './App.css'
-
-function AppContent() {
-  const { activeView } = useApp()
-  return (
-    <div className="app">
-      <Header />
-      <main className="main-content">
-        {activeView === 'hub' && <HubView />}
-        {activeView === 'bolletta' && <BollettaRoom />}
-        {activeView === 'rata' && <RataRoom />}
-      </main>
-      <GlossaryPanel />
-    </div>
-  )
-}
-
-export default function App() {
-  return <AppProvider><AppContent /></AppProvider>
-}
-```
-
-- [ ] **1.13 — Crea `src/App.css`**
-
-```css
-:root {
-  --color-primary: #2563eb;
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-zona-energia: #3b82f6;
-  --color-zona-potenza: #eab308;
-  --color-zona-oneri: #f97316;
-  --color-zona-trasporto: #ef4444;
-  --color-zona-imposte: #8b5cf6;
-  --radius: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, -apple-system, sans-serif; background: var(--color-bg); color: var(--color-text); }
-.app { min-height: 100vh; display: flex; flex-direction: column; }
-.main-content { flex: 1; padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%; }
-button { cursor: pointer; }
-```
-
-- [ ] **1.14 — Crea `src/index.css`**
-
-```css
-*, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; }
-```
-
-- [ ] **1.15 — Verifica tutti i test passano**
+- [ ] **1b.7 — Esegui test → verifica PASS**
 
 ```bash
-npm run test
+npm run test -- tests/loanCalculator.test.js
 ```
-Atteso: 8 test PASS (4 AppContext + 4 loanCalculator).
+Atteso: 4 test PASS.
 
-- [ ] **1.16 — Commit e notifica Orchestrator**
+- [ ] **1b.8 — Commit**
 
 ```bash
 git add -A
-git commit -m "feat(#1): setup + AppContext + data layer
+git commit -m "feat(#1b): data layer completo
 
-- AppContext: currentLevel, activeView, glossaryOpen, activeVoce
 - loanCalculator: calcolaRata, calcolaPianoAmmortamento, formatEuro
 - data/bolletta.js: 6 voci con spiegazioni a 3 livelli
-- data/glossario.js: 23 termini con correlati
+- data/glossario.js: 25 termini con correlati
 - data/rata.js: contesti e costanti
-- 8 unit test passanti
+- 4 unit test passanti
 
-Closes #1"
-git push origin feature/1-setup-appcontext-data
+Closes #1b
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git push origin feature/1b-data-layer
 ```
 
-> **Orchestrator:** dopo merge di #1 → dispatcha in parallelo Developer Agent #2, #3, #4, #5
+> **Orchestrator:** attende che ENTRAMBE #1a e #1b siano Done → dispatcha in parallelo Developer Agent #2, #3, #4, #5
 
 ---
 
@@ -623,7 +740,7 @@ git push origin feature/1-setup-appcontext-data
 **Developer Agent #2 (`claude-sonnet-5`) | Parallelo con #3 #4 #5 | ~30 min**
 
 **Branch:** `feature/2-header-hubview`
-**Dipende da:** Issue #1 mergiata su main → `git checkout main && git pull && git checkout -b feature/2-header-hubview`
+**Dipende da:** Issue #1a e #1b entrambe mergiate su main → `git checkout main && git pull && git checkout -b feature/2-header-hubview`
 
 **Files da creare:**
 - `src/components/Header/Header.jsx` · `src/components/Header/Header.css` · `src/components/Header/LevelSelector.jsx`
@@ -759,7 +876,7 @@ git push origin feature/2-header-hubview
 **Developer Agent #3 (`claude-sonnet-5`) | Parallelo con #2 #4 #5 | ~55 min**
 
 **Branch:** `feature/3-bollettaroom`
-**Dipende da:** Issue #1 mergiata su main
+**Dipende da:** Issue #1a e #1b entrambe mergiate su main → `git checkout main && git pull && git checkout -b feature/3-bollettaroom`
 
 **Files da creare:**
 - `src/components/Bolletta/BollettaRoom.jsx` · `BollettaRoom.css`
@@ -1019,7 +1136,7 @@ git push origin feature/3-bollettaroom
 **Developer Agent #4 (`claude-sonnet-5`) | Parallelo con #2 #3 #5 | ~35 min**
 
 **Branch:** `feature/4-glossarypanel`
-**Dipende da:** Issue #1 mergiata su main
+**Dipende da:** Issue #1a e #1b entrambe mergiate su main → `git checkout main && git pull && git checkout -b feature/4-glossarypanel`
 
 **Files da creare:**
 - `src/components/Glossario/GlossaryPanel.jsx` · `GlossaryPanel.css`
@@ -1165,7 +1282,7 @@ git push origin feature/4-glossarypanel
 **Developer Agent #5 (`claude-sonnet-5`) | Parallelo con #2 #3 #4 | ~40 min**
 
 **Branch:** `feature/5-rataroom`
-**Dipende da:** Issue #1 mergiata su main
+**Dipende da:** Issue #1a e #1b entrambe mergiate su main → `git checkout main && git pull && git checkout -b feature/5-rataroom`
 
 **Files da creare:**
 - `src/components/Rata/RataRoom.jsx` · `RataRoom.css`
