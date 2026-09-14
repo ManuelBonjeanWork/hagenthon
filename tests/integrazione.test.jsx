@@ -109,7 +109,8 @@ describe('Flusso utente completo', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByText('Un prestito o una rata'))
-    await user.click(screen.getByText('💡 FinanzaChiara'))
+    // per nome accessibile, non per testo: il bottone ora contiene anche il logo SVG
+    await user.click(screen.getByRole('button', { name: /FinanzaChiara/ }))
     expect(screen.getByText('Cosa vuoi capire oggi?')).toBeInTheDocument()
   })
 })
