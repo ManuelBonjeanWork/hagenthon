@@ -10,6 +10,16 @@
 
 **Tech Stack:** React 18, Vite 5, Recharts 2, Vitest + React Testing Library.
 
+## Modelli per agente
+
+| Agente | Modello | Motivazione |
+|--------|---------|-------------|
+| **Orchestrator Agent** | `claude-opus-5` | Ragionamento complesso: legge il piano, valuta dipendenze, decide quando parallelizzare, gestisce i gate umani |
+| **Developer Agent** | `claude-sonnet-5` | Scrittura di codice React completo da spec; bilanciamento tra qualità e velocità |
+| **Code Review Agent** | `claude-sonnet-5` | Analisi critica del codice, verifica criteri architetturali e copy, feedback strutturato |
+| **Tester Agent** | `claude-sonnet-5` | Scrittura e revisione test E2E (Issue #6); richiede comprensione dei flussi utente |
+| **GitHub PM Agent** | `claude-haiku-4-5-20251001` | Task meccanici e ripetibili: creare Issue, aprire PR, aggiornare label e Projects board |
+
 ## Global Constraints
 
 - React 18 + Vite 5 — `npm create vite@latest finanzachiara -- --template react`
@@ -58,7 +68,7 @@ Issue #1: Setup + AppContext + Data Layer
 ---
 
 ## Phase 0 — Setup Pipeline
-**Orchestrator Agent + GitHub PM Agent | ~25 min | Prima di tutto**
+**Orchestrator Agent (`claude-opus-5`) + GitHub PM Agent (`claude-haiku-4-5-20251001`) | ~25 min | Prima di tutto**
 
 - [ ] **0.1 — Orchestrator legge il piano e inizializza lo stato**
 
@@ -183,7 +193,7 @@ gh issue create \
 ---
 
 ## Issue #1 — Setup + AppContext + Data Layer
-**Developer Agent #1 | Sequenziale | ~40 min**
+**Developer Agent #1 (`claude-sonnet-5`) | Sequenziale | ~40 min**
 
 > **Orchestrator:** dispatcha questo agent appena il pipeline parte. Nessuna dipendenza.
 
@@ -610,7 +620,7 @@ git push origin feature/1-setup-appcontext-data
 ---
 
 ## Issue #2 — Header + HubView
-**Developer Agent #2 | Parallelo con #3 #4 #5 | ~30 min**
+**Developer Agent #2 (`claude-sonnet-5`) | Parallelo con #3 #4 #5 | ~30 min**
 
 **Branch:** `feature/2-header-hubview`
 **Dipende da:** Issue #1 mergiata su main → `git checkout main && git pull && git checkout -b feature/2-header-hubview`
@@ -746,7 +756,7 @@ git push origin feature/2-header-hubview
 ---
 
 ## Issue #3 — BollettaRoom completa
-**Developer Agent #3 | Parallelo con #2 #4 #5 | ~55 min**
+**Developer Agent #3 (`claude-sonnet-5`) | Parallelo con #2 #4 #5 | ~55 min**
 
 **Branch:** `feature/3-bollettaroom`
 **Dipende da:** Issue #1 mergiata su main
@@ -1006,7 +1016,7 @@ git push origin feature/3-bollettaroom
 ---
 
 ## Issue #4 — GlossaryPanel
-**Developer Agent #4 | Parallelo con #2 #3 #5 | ~35 min**
+**Developer Agent #4 (`claude-sonnet-5`) | Parallelo con #2 #3 #5 | ~35 min**
 
 **Branch:** `feature/4-glossarypanel`
 **Dipende da:** Issue #1 mergiata su main
@@ -1152,7 +1162,7 @@ git push origin feature/4-glossarypanel
 ---
 
 ## Issue #5 — RataRoom
-**Developer Agent #5 | Parallelo con #2 #3 #4 | ~40 min**
+**Developer Agent #5 (`claude-sonnet-5`) | Parallelo con #2 #3 #4 | ~40 min**
 
 **Branch:** `feature/5-rataroom`
 **Dipende da:** Issue #1 mergiata su main
@@ -1293,7 +1303,7 @@ git push origin feature/5-rataroom
 ---
 
 ## Issue #6 — Integrazione + polish + build
-**Developer Agent #6 | Sequenziale (dopo #2 #3 #4 #5) | ~30 min**
+**Developer Agent #6 (`claude-sonnet-5`) + Tester Agent (`claude-sonnet-5`) | Sequenziale (dopo #2 #3 #4 #5) | ~30 min**
 
 **Branch:** `feature/6-integrazione`
 **Dipende da:** Issue #2, #3, #4, #5 tutte mergiate su main
@@ -1362,7 +1372,7 @@ git push origin feature/6-integrazione
 
 ---
 
-## Criteri di accettazione per il Code Review Agent
+## Criteri di accettazione per il Code Review Agent (`claude-sonnet-5`)
 
 Per ogni PR, il Code Review Agent verifica:
 
