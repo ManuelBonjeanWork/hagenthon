@@ -49,29 +49,43 @@ Cervello del pipeline. Unico agente con visione del grafo delle dipendenze. Tutt
 
 ---
 
-### 6 Issue e grafo delle dipendenze
+### 8 Issue e grafo delle dipendenze ottimizzato
 
 ```
-Issue #1: Setup + AppContext + Data Layer   ← SEQUENZIALE (fondazione)
-              │
-    ┌─────────┼──────────┬──────────┐
-    ▼         ▼          ▼          ▼
- Issue #2  Issue #3   Issue #4   Issue #5   ← PARALLELI (Orchestrator lancia 4 agenti)
- Header    Bolletta   Glossario  RataRoom
- HubView   Room       Panel
-    └─────────┴──────────┴──────────┘
-              │
-              ▼
-         Issue #6: Integrazione + polish + build   ← SEQUENZIALE (finale)
+Phase 0 (~10 min, PARALLELO):
+  Orchestrator legge piano  +  GitHub PM Agent crea repo, board, 8 Issue
+        │
+        ▼
+Issue #0: Scaffolding (~8 min, SEQUENZIALE)
+  npm create vite, install deps, vite.config, App.jsx shell, App.css
+        │
+   ┌────┴───────────────────────────┐
+   ▼                                ▼
+Issue #1a: AppContext (~15 min)  Issue #1b: Data Layer (~20 min)   ← PARALLELO
+  AppContext.jsx + test             loanCalculator.js
+                                    bolletta.js / glossario.js
+                                    rata.js + test
+   └────┬───────────────────────────┘
+        │ (entrambe Done)
+   ┌────┼──────────┬──────────┐
+   ▼    ▼          ▼          ▼
+  #2   #3         #4         #5                                     ← PARALLELO
+Header Bolletta  Glossario  RataRoom
+   └────┴──────────┴──────────┘
+        │ (tutte e 4 Done)
+        ▼
+   Issue #6: Integrazione + polish + build (~30 min, SEQUENZIALE)
 ```
 
 | Issue | Contenuto | Dipende da | Agenti in gioco |
 |-------|-----------|-----------|----------------|
-| #1 | Setup + AppContext + Data Layer | — | Developer → Code Review → PM |
-| #2 | Header + HubView | #1 | Developer → Code Review → PM |
-| #3 | BollettaRoom completa | #1 | Developer → Code Review → PM |
-| #4 | GlossaryPanel | #1 | Developer → Code Review → PM |
-| #5 | RataRoom | #1 | Developer → Code Review → PM |
+| #0 | Scaffolding Vite + App shell + CSS | — | Developer → Code Review → PM |
+| #1a | AppContext + test | #0 | Developer → Code Review → PM |
+| #1b | loanCalculator + bolletta + glossario + rata + test | #0 | Developer → Code Review → PM |
+| #2 | Header + HubView | #1a #1b | Developer → Code Review → PM |
+| #3 | BollettaRoom completa | #1a #1b | Developer → Code Review → PM |
+| #4 | GlossaryPanel | #1a #1b | Developer → Code Review → PM |
+| #5 | RataRoom | #1a #1b | Developer → Code Review → PM |
 | #6 | Integrazione + polish + E2E | #2 #3 #4 #5 | Developer → Code Review → Tester → PM |
 
 ---
@@ -80,15 +94,16 @@ Issue #1: Setup + AppContext + Data Layer   ← SEQUENZIALE (fondazione)
 
 | Fase | Agenti attivi | Tempo stimato |
 |------|--------------|--------------|
-| Setup pipeline | Orchestrator + GitHub PM Agent (crea repo, board, 6 Issue) | ~25 min |
-| Issue #1 | 1 Developer Agent sequenziale | ~40 min |
+| Phase 0 | Orchestrator + GitHub PM Agent in parallelo | ~10 min |
+| Issue #0 | 1 Developer Agent (scaffolding) | ~8 min |
+| Issue #1a + #1b | 2 Developer Agent in parallelo | ~20 min (limitato da #1b) |
 | Issue #2+3+4+5 | 4 Developer Agent in parallelo | ~55 min (limitato da #3) |
-| Code Review paralleli | 4 Code Review Agent in parallelo | ~15 min |
-| PR merge paralleli | GitHub PM Agent (sequenziale per sicurezza) | ~10 min |
 | Issue #6 | Developer + Tester Agent | ~30 min |
-| **Totale** | | **~2h55min** |
+| **Totale** | | **~2h03min** |
 
-Rimangono ~2 ore per debugging, demo prep e presentazione.
+> Code Review e GitHub PM Agent per ogni Issue girano non appena quella specifica Issue è pronta — non aspettano il completamento delle Issue parallele sorelle.
+
+Rimangono ~3 ore per debugging, demo prep e presentazione.
 
 ---
 
@@ -535,7 +550,7 @@ Agenti rivolti agli sviluppatori — operano offline, in fase di sviluppo e manu
 
 ---
 
-> 📌 **L'Orchestrator Agent e l'Agentic SDLC Pipeline non sono roadmap futura — sono il metodo con cui FinanzaChiara viene costruita adesso.** Vedere **Sezione 12** per il design completo del pipeline, il grafo delle dipendenze e la timeline di sviluppo.
+> 📌 **L'Orchestrator Agent e l'Agentic SDLC Pipeline non sono roadmap futura — sono il metodo con cui FinanzaChiara viene costruita adesso.** Vedere **Sezione 3** per il grafo delle dipendenze ottimizzato (8 Issue, 2 finestre di parallelismo) e la timeline di ~2h03min.
 
 ---
 
