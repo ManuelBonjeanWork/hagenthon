@@ -1,0 +1,97 @@
+{
+  "session": "2026-09-14",
+  "plan": "docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md",
+  "project": {
+    "number": 2,
+    "owner": "ManuelBonjeanWork",
+    "repo": "ManuelBonjeanWork/hagenthon",
+    "projectId": "PVT_kwHOBoGBZs4Bjbps",
+    "fieldId": "PVTSSF_lAHOBoGBZs4BjbpszhiQd18",
+    "optionIds": {
+      "Queued": "69e80881",
+      "In Sviluppo": "1b30228a",
+      "In Code Review": "abab547f",
+      "Pronto al Merge": "cf1335c9",
+      "Done": "4da46e7b"
+    }
+  },
+  "issues": {
+    "0": {
+      "status": "queued",
+      "deps": [],
+      "slug": "scaffolding",
+      "gh": 1,
+      "itemId": "PVTI_lAHOBoGBZs4Bjbpszg62DeY"
+    },
+    "1a": {
+      "status": "queued",
+      "deps": [
+        "0"
+      ],
+      "slug": "appcontext",
+      "gh": 2,
+      "itemId": "PVTI_lAHOBoGBZs4Bjbpszg62Dfo"
+    },
+    "1b": {
+      "status": "queued",
+      "deps": [
+        "0"
+      ],
+      "slug": "data-layer",
+      "gh": 3,
+      "itemId": "PVTI_lAHOBoGBZs4Bjbpszg62Dg4"
+    },
+    "2": {
+      "status": "queued",
+      "deps": [
+        "1a",
+        "1b"
+      ],
+      "slug": "header-hubview",
+      "gh": 4,
+      "itemId": "PVTI_lAHOBoGBZs4Bjbpszg62Dhw"
+    },
+    "3": {
+      "status": "queued",
+      "deps": [
+        "1a",
+        "1b"
+      ],
+      "slug": "bollettaroom",
+      "gh": 5,
+      "itemId": "PVTI_lAHOBoGBZs4Bjbpszg62Di0"
+    },
+    "4": {
+      "status": "queued",
+      "deps": [
+        "1a",
+        "1b"
+      ],
+      "slug": "glossarypanel",
+      "gh": 6,
+      "itemId": "PVTI_lAHOBoGBZs4Bjbpszg62Dj0"
+    },
+    "5": {
+      "status": "queued",
+      "deps": [
+        "1a",
+        "1b"
+      ],
+      "slug": "rataroom",
+      "gh": 7,
+      "itemId": "PVTI_lAHOBoGBZs4Bjbpszg62DlM"
+    },
+    "6": {
+      "status": "queued",
+      "deps": [
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "slug": "integrazione-polish",
+      "gh": 8,
+      "itemId": "PVTI_lAHOBoGBZs4Bjbpszg62DmU"
+    }
+  }
+}
