@@ -1,5 +1,6 @@
 .header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
-.logo-btn { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; background: none; border: none; color: var(--color-primary); flex-shrink: 0; }
+.logo-btn { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; background: none; border: none; color: var(--color-primary); flex-shrink: 0; }
+.logo-img { width: 32px; height: 32px; flex-shrink: 0; }
 .level-selector { display: flex; gap: 4px; background: var(--color-primary-tint); padding: 4px; border-radius: var(--radius-pill); margin-left: auto; }
 .level-btn { padding: 6px 14px; border: none; border-radius: var(--radius-pill); background: transparent; color: var(--color-text-muted); font-size: 0.875rem; transition: all 0.15s; }
 .level-btn.active { background: var(--color-surface); color: var(--color-text); font-weight: 600; box-shadow: var(--shadow); }
