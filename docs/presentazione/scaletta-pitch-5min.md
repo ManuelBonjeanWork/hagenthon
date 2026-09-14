@@ -1,9 +1,9 @@
 # Scaletta Pitch — FinanzaChiara (5 minuti, giuria hackathon)
 
 > **Livello: `manageriale-tecnico`** — pitch a una giuria: taglio bilanciato prodotto + metodo, dettaglio tecnico incluso solo dove è il differenziatore (agenti, modelli, parallelismo).
-> **Budget parole:** 10 slide, note speaker totali ~590 parole (sotto il tetto dei ~700; il margine assorbe la demo/walkthrough e le pause tra slide).
+> **Budget parole:** 10 slide, note speaker totali ~590 parole (sotto il tetto dei ~700; il margine assorbe la demo dal vivo e le pause tra slide).
 > **Lingua:** italiano. Termini tecnici consolidati mantenuti (`commit`, `deploy`, `board`, `MVP`, `Issue`, `kWh`, `TAEG`, `TAN`).
-> **Nota di stato (2026-09-14):** claim allineate alla realtà attuale del repo — mergiati scaffolding (#0) e AppContext (#1a); UI/room/simulatore ancora in costruzione dalla pipeline. Se al momento del pitch l'MVP è costruito e deployato, "rinforza" le slide 5, 8 e 10 (vedi note a fondo file).
+> **Nota di stato (2026-09-14):** claim allineate alla realtà attuale del repo — la pipeline ha completato l'MVP: data layer, componenti (Bolletta, Glossario, Header, Hub, Rata), integrazione in `App.jsx` e test (inclusi end-to-end) sono su `main`. L'app gira in locale (`npm run dev`, `npm run test` verdi); non è ancora deployata (nessuna build `dist/`). Se prima del pitch farete un deploy pubblico, aggiornate la slide 10 con "deployata".
 
 ---
 
@@ -49,13 +49,13 @@
 
 ## Slide 5 — Tre stanze, un simulatore, il costo reale
 
-*(walkthrough del prodotto)*
+*(demo dal vivo — `npm run dev`)*
 
 - **Hub:** scegli il livello e l'area
 - **Bolletta:** spiegata voce per voce + simulatore (slider kWh → costi)
 - **Rata:** piano di ammortamento e costo reale (totale, capitale, interessi)
 
-**Nota speaker:** L'app è progettata in tre stanze. Dall'Hub si sceglie il livello e si entra. Nella stanza Bolletta ogni voce è spiegata, e un simulatore permette di muovere il consumo in kWh per vedere come cambiano i costi. Nella stanza Rata mostriamo il piano di ammortamento e il costo reale di un prestito: quanto si paga in totale, quanto è capitale e quanto interesse. Un glossario cliccabile è sempre a portata.
+**Nota speaker:** L'app è organizzata in tre stanze. Dall'Hub si sceglie il livello e si entra. Nella stanza Bolletta ogni voce è spiegata, e un simulatore permette di muovere il consumo in kWh per vedere come cambiano i costi. Nella stanza Rata mostriamo il piano di ammortamento e il costo reale di un prestito: quanto si paga in totale, quanto è capitale e quanto interesse. Un glossario cliccabile è sempre a portata.
 
 ---
 
@@ -85,7 +85,7 @@
 - 8 Issue ordinate per dipendenze
 - 2 finestre di parallelismo → ~2 ore stimate sulla critical path
 
-**Nota speaker:** Il flusso è tema, design, mvp. Dal tema e dai vincoli, un agente ha prodotto il design doc; la pipeline poi implementa otto Issue, ordinate per dipendenze. Il punto è il parallelismo: dove le Issue sono indipendenti, più agenti lavorano insieme, in due finestre. Context e dati prima; poi stanze e glossario. Il piano stima circa due ore di sviluppo sulla critical path, contro uno sviluppo tutto in fila.
+**Nota speaker:** Il flusso è tema, design, mvp. Dal tema e dai vincoli, un agente ha prodotto il design doc; la pipeline ha poi implementato otto Issue, ordinate per dipendenze. Il punto è il parallelismo: dove le Issue erano indipendenti, più agenti hanno lavorato insieme, in due finestre. Context e dati prima; poi stanze e glossario. Il piano stimava circa due ore di sviluppo sulla critical path, contro uno sviluppo tutto in fila.
 
 ---
 
@@ -101,26 +101,26 @@
 
 ## Slide 10 — FinanzaChiara, in chiaro
 
-- Metodo operativo: repo, board e pipeline di agenti al lavoro; codice su Git
-- MVP in costruzione — scaffolding e stato globale già su `main`
+- Metodo: repo, board e pipeline di agenti; tutto il codice su Git
+- MVP funzionante: componenti, data layer e test end-to-end, in esecuzione locale
 - *"Le tue bollette e i tuoi prestiti, finalmente in chiaro."*
 
-**Nota speaker:** Chiudiamo con quello che lasciamo: un metodo che funziona — repo, board e una squadra di agenti che costruisce l'MVP, con il codice su Git — e un prodotto già progettato nel dettaglio, con una visione chiara di dove arrivare. Ma il messaggio da ricordare è uno solo: la chiarezza non si ottiene nascondendo i numeri, si ottiene spiegandoli. Le vostre bollette e i vostri prestiti, finalmente in chiaro. Grazie.
+**Nota speaker:** Chiudiamo con quello che lasciamo: un metodo che funziona — repo, board e una squadra di agenti che ha costruito l'MVP, con il codice su Git — e un prodotto funzionante, testato end-to-end, con una visione chiara di dove arrivare. Ma il messaggio da ricordare è uno solo: la chiarezza non si ottiene nascondendo i numeri, si ottiene spiegandoli. Le vostre bollette e i vostri prestiti, finalmente in chiaro. Grazie.
 
 ---
 
-**Totale note speaker: ~590 parole** — tempo di parlato stimato ~4'00"–4'15" a ritmo da pitch, più la demo/walkthrough (slide 5) e le pause di transizione: resta entro i 5 minuti, con margine ridotto (se serve recuperare tempo, la slide 9 to-be è la più comprimibile).
+**Totale note speaker: ~590 parole** — tempo di parlato stimato ~4'00"–4'15" a ritmo da pitch, più la demo dal vivo (slide 5) e le pause di transizione: resta entro i 5 minuti, con margine ridotto (se serve recuperare tempo, la slide 9 to-be è la più comprimibile).
 
 ---
 
-**Nota stilistica:** Livello `manageriale-tecnico` — giuria di hackathon, deliverable bilanciato prodotto/metodo. Formato scelto: scaletta slide + note speaker separate, il più adatto a un pitch cronometrato. Ho enfatizzato il differenziatore — i tre livelli, il vincolo etico e la pipeline di agenti con nomi/modelli e parallelismo — perché è ciò su cui la giuria valuta chiarezza e correttezza. La slide 9 "to-be" mostra ambizione restando dentro il perimetro etico ("spiega, mai consiglia").
+**Nota stilistica:** Livello `manageriale-tecnico` — giuria di hackathon, deliverable bilanciato prodotto/metodo. Formato scelto: scaletta slide + note speaker separate, il più adatto a un pitch cronometrato. Ho enfatizzato il differenziatore — i tre livelli, il vincolo etico e la pipeline di agenti con nomi/modelli e parallelismo — perché è ciò su cui la giuria valuta chiarezza e correttezza. Ho tenuto le note sotto il tetto (~590 vs ~700 parole) per non sforare i 5 minuti includendo la demo dal vivo. La slide 9 "to-be" mostra ambizione restando dentro il perimetro etico ("spiega, mai consiglia").
 
 Etichetta del livello intermedio: nel copy user-facing uso **"Chiaro"**, la label che l'app mostra davvero nel selettore (`🔵 Chiaro`); il valore interno resta `normale` (case-sensitive, come da `CLAUDE.md`).
 
-**Claim allineate alla realtà (2026-09-14).** Stato verificato sul repo: mergiati #0 (scaffolding) e #1a (AppContext); data layer, componenti, room e glossario non ancora presenti; nessuna build `dist/`. Perciò le slide 5, 8 e 10 evitano di dichiarare un MVP "funzionante e deployato" o un tempo di ~2 ore già consumato:
-- **Slide 5** è un *walkthrough del prodotto* (design), non una demo garantita dal vivo.
-- **Slide 8** presenta le ~2 ore come *stima di piano* sulla critical path, non come risultato raggiunto.
+**Claim allineate alla realtà (2026-09-14).** Stato verificato sul repo: la pipeline ha completato l'MVP — data layer, componenti (Bolletta, Glossario, Header, Hub, Rata), integrazione in `App.jsx` e test (inclusi end-to-end) sono su `main`. L'app è **funzionante in locale** (`npm run dev`, `npm run test` verdi); **non è ancora deployata** (nessuna build `dist/`). Perciò:
+- **Slide 5** è una *demo dal vivo* dal dev server.
+- **Slide 8** presenta le ~2 ore come *stima di piano* sulla critical path (tempo reale non ancora misurato in queste note).
 - **Slide 9** è dichiaratamente il *to-be* (visione), separata da ciò che esiste oggi.
-- **Slide 10** parla di *MVP in costruzione* e di metodo operativo, non di app già consegnata.
+- **Slide 10** dichiara un *MVP funzionante e testato*, non "deployato".
 
-Se al momento del pitch l'MVP sarà costruito e deployato, si possono "rinforzare": slide 5 → "demo dal vivo"; slide 8 → "~2 ore *effettive*"; slide 10 → "app React funzionante e deployata".
+Quando farete un deploy pubblico, aggiornate la slide 10 → "app React funzionante e deployata"; se misurate il tempo reale di sviluppo, la slide 8 → "~2 ore *effettive*".
