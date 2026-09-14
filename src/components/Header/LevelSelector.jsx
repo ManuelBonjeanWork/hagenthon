@@ -3,7 +3,7 @@ import './Header.css'
 
 const LIVELLI = [
   { id: 'semplice', label: '🟢 Semplice' },
-  { id: 'normale',  label: '🔵 Chiaro'   },
+  { id: 'normale',  label: '🔵 Normale'  },
   { id: 'tecnico',  label: '🔬 Tecnico'  },
 ]
 
