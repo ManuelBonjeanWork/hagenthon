@@ -25,7 +25,110 @@ Entrambi gli scenari sono **educativi e non consulenziali**: il sistema non dice
 
 ---
 
-## 3. Architettura Generale
+
+## 3. Come costruiamo: Agentic SDLC Pipeline
+
+FinanzaChiara viene costruita usando il pipeline agentico come metodo di sviluppo primario — non solo come roadmap futura. L'**Orchestrator Agent** coordina tutto; l'umano approva solo ai gate.
+
+### Orchestrator Agent
+
+Cervello del pipeline. Unico agente con visione del grafo delle dipendenze. Tutti gli altri agenti sono stateless — solo l'Orchestrator sa cosa viene prima e dopo.
+
+**Avvio:** invocato una volta dall'umano con il plan doc come input.  
+**Compito:**
+1. Estrae il grafo delle dipendenze dal piano
+2. Monitora GitHub Projects API per i cambi di status
+3. Quando le dipendenze di un'Issue sono "Done" → dispatcha Developer Agent (worktree isolato)
+4. **Issue indipendenti vengono dispatchate in parallelo** — più Developer Agent simultaneamente
+5. Developer Agent completo → dispatcha Code Review Agent
+6. Code Review approva → dispatcha GitHub PM Agent → PR
+7. Notifica l'umano **solo** ai gate di approvazione
+8. Fallimento → riprova una volta, poi notifica con log
+
+**Stato persistente:** `docs/pipeline-state.json` — permette ripresa in caso di interruzione.
+
+---
+
+### 6 Issue e grafo delle dipendenze
+
+```
+Issue #1: Setup + AppContext + Data Layer   ← SEQUENZIALE (fondazione)
+              │
+    ┌─────────┼──────────┬──────────┐
+    ▼         ▼          ▼          ▼
+ Issue #2  Issue #3   Issue #4   Issue #5   ← PARALLELI (Orchestrator lancia 4 agenti)
+ Header    Bolletta   Glossario  RataRoom
+ HubView   Room       Panel
+    └─────────┴──────────┴──────────┘
+              │
+              ▼
+         Issue #6: Integrazione + polish + build   ← SEQUENZIALE (finale)
+```
+
+| Issue | Contenuto | Dipende da | Agenti in gioco |
+|-------|-----------|-----------|----------------|
+| #1 | Setup + AppContext + Data Layer | — | Developer → Code Review → PM |
+| #2 | Header + HubView | #1 | Developer → Code Review → PM |
+| #3 | BollettaRoom completa | #1 | Developer → Code Review → PM |
+| #4 | GlossaryPanel | #1 | Developer → Code Review → PM |
+| #5 | RataRoom | #1 | Developer → Code Review → PM |
+| #6 | Integrazione + polish + E2E | #2 #3 #4 #5 | Developer → Code Review → Tester → PM |
+
+---
+
+### Timeline con agenti paralleli
+
+| Fase | Agenti attivi | Tempo stimato |
+|------|--------------|--------------|
+| Setup pipeline | Orchestrator + GitHub PM Agent (crea repo, board, 6 Issue) | ~25 min |
+| Issue #1 | 1 Developer Agent sequenziale | ~40 min |
+| Issue #2+3+4+5 | 4 Developer Agent in parallelo | ~55 min (limitato da #3) |
+| Code Review paralleli | 4 Code Review Agent in parallelo | ~15 min |
+| PR merge paralleli | GitHub PM Agent (sequenziale per sicurezza) | ~10 min |
+| Issue #6 | Developer + Tester Agent | ~30 min |
+| **Totale** | | **~2h55min** |
+
+Rimangono ~2 ore per debugging, demo prep e presentazione.
+
+---
+
+### Ciclo per ogni Issue
+
+```
+Orchestrator dispatcha Developer Agent (worktree git isolato)
+    │
+    ▼
+Developer Agent
+    ├── legge docs/features/<id>/ + sezione rilevante del design doc
+    ├── implementa feature + unit test
+    ├── committa su feature branch
+    └── notifica Orchestrator → "done"
+    │
+    ▼
+Code Review Agent
+    ├── analizza diff della feature branch
+    ├── posta commenti inline se necessario
+    └── approva o richiede fix → torna a Developer Agent
+    │
+    ▼
+GitHub PM Agent
+    ├── apre PR feature branch → main
+    ├── aggiorna Project item → "Pronto al Merge"
+    └── ⛔ GATE UMANO: merge manuale dopo review PR
+    │
+    ▼ (solo Issue #6)
+Tester Agent
+    ├── verifica happy path manualmente (no Playwright in MVP)
+    └── segnala problemi → Orchestrator → Developer Agent
+```
+
+---
+
+### Cosa rimane al piano di implementazione
+
+Il file `docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md` contiene il codice completo per ogni Issue. Il Developer Agent lo legge come contesto per implementare correttamente ogni feature.
+
+## 4. Architettura Generale
 
 ### Stack tecnologico
 - **Frontend:** React + Vite (client-side only)
@@ -83,7 +186,7 @@ src/
 
 ---
 
-## 4. Header e Level Selector
+## 5. Header e Level Selector
 
 ### Comportamento
 Il `LevelSelector` è sempre visibile nell'header. Cambiando il livello, **tutti i testi dell'app si aggiornano istantaneamente** tramite Context — sia la bolletta, sia la rata, sia il glossario.
@@ -99,7 +202,7 @@ Il livello scelto viene salvato in `localStorage` per non costringere l'utente a
 
 ---
 
-## 5. HubView — Schermata Iniziale
+## 6. HubView — Schermata Iniziale
 
 ### Situation Cards
 
@@ -123,7 +226,7 @@ Il livello scelto viene salvato in `localStorage` per non costringere l'utente a
 
 ---
 
-## 6. BollettaRoom — Scenario Primario
+## 7. BollettaRoom — Scenario Primario
 
 ### Struttura layout (due colonne su desktop, stack su mobile)
 
@@ -200,7 +303,7 @@ Fascia principale:    ( Giorno  ● Sera  ○ Notte )
 
 ---
 
-## 7. RataRoom — Scenario Secondario
+## 8. RataRoom — Scenario Secondario
 
 ### LoanForm — 3 input, ricalcolo istantaneo
 
@@ -256,7 +359,7 @@ Spiegazione contestuale sotto il grafico, al livello corrente.
 
 ---
 
-## 8. GlossaryPanel
+## 9. GlossaryPanel
 
 ### Comportamento
 - Slide-in da destra, overlay (non cambia la view corrente)
@@ -304,7 +407,7 @@ Spiegazione contestuale sotto il grafico, al livello corrente.
 
 ---
 
-## 9. Before / After Simplicity Evidence
+## 10. Before / After Simplicity Evidence
 
 ### Prima (testo reale da bolletta Enel)
 
@@ -320,7 +423,7 @@ Spiegazione contestuale sotto il grafico, al livello corrente.
 
 ---
 
-## 10. Risk & Clarity Note
+## 11. Risk & Clarity Note
 
 ### Cosa è stato semplificato
 - Linguaggio tecnico delle voci bolletta → spiegazioni in tre livelli accessibili
@@ -346,7 +449,7 @@ Spiegazione contestuale sotto il grafico, al livello corrente.
 
 ---
 
-## 11. Roadmap Futura (post-hackathon)
+## 12. Roadmap Futura (post-hackathon)
 
 ### Toolchain Agentici per il Team
 
@@ -511,105 +614,3 @@ Ogni agente è stateless e isolato — non condividono contesto tra loro. Il fro
 - Progressione del livello linguistico automatica man mano che l'utente interagisce
 
 ---
-
-## 12. Come costruiamo: Agentic SDLC Pipeline
-
-FinanzaChiara viene costruita usando il pipeline agentico come metodo di sviluppo primario — non solo come roadmap futura. L'**Orchestrator Agent** coordina tutto; l'umano approva solo ai gate.
-
-### Orchestrator Agent
-
-Cervello del pipeline. Unico agente con visione del grafo delle dipendenze. Tutti gli altri agenti sono stateless — solo l'Orchestrator sa cosa viene prima e dopo.
-
-**Avvio:** invocato una volta dall'umano con il plan doc come input.  
-**Compito:**
-1. Estrae il grafo delle dipendenze dal piano
-2. Monitora GitHub Projects API per i cambi di status
-3. Quando le dipendenze di un'Issue sono "Done" → dispatcha Developer Agent (worktree isolato)
-4. **Issue indipendenti vengono dispatchate in parallelo** — più Developer Agent simultaneamente
-5. Developer Agent completo → dispatcha Code Review Agent
-6. Code Review approva → dispatcha GitHub PM Agent → PR
-7. Notifica l'umano **solo** ai gate di approvazione
-8. Fallimento → riprova una volta, poi notifica con log
-
-**Stato persistente:** `docs/pipeline-state.json` — permette ripresa in caso di interruzione.
-
----
-
-### 6 Issue e grafo delle dipendenze
-
-```
-Issue #1: Setup + AppContext + Data Layer   ← SEQUENZIALE (fondazione)
-              │
-    ┌─────────┼──────────┬──────────┐
-    ▼         ▼          ▼          ▼
- Issue #2  Issue #3   Issue #4   Issue #5   ← PARALLELI (Orchestrator lancia 4 agenti)
- Header    Bolletta   Glossario  RataRoom
- HubView   Room       Panel
-    └─────────┴──────────┴──────────┘
-              │
-              ▼
-         Issue #6: Integrazione + polish + build   ← SEQUENZIALE (finale)
-```
-
-| Issue | Contenuto | Dipende da | Agenti in gioco |
-|-------|-----------|-----------|----------------|
-| #1 | Setup + AppContext + Data Layer | — | Developer → Code Review → PM |
-| #2 | Header + HubView | #1 | Developer → Code Review → PM |
-| #3 | BollettaRoom completa | #1 | Developer → Code Review → PM |
-| #4 | GlossaryPanel | #1 | Developer → Code Review → PM |
-| #5 | RataRoom | #1 | Developer → Code Review → PM |
-| #6 | Integrazione + polish + E2E | #2 #3 #4 #5 | Developer → Code Review → Tester → PM |
-
----
-
-### Timeline con agenti paralleli
-
-| Fase | Agenti attivi | Tempo stimato |
-|------|--------------|--------------|
-| Setup pipeline | Orchestrator + GitHub PM Agent (crea repo, board, 6 Issue) | ~25 min |
-| Issue #1 | 1 Developer Agent sequenziale | ~40 min |
-| Issue #2+3+4+5 | 4 Developer Agent in parallelo | ~55 min (limitato da #3) |
-| Code Review paralleli | 4 Code Review Agent in parallelo | ~15 min |
-| PR merge paralleli | GitHub PM Agent (sequenziale per sicurezza) | ~10 min |
-| Issue #6 | Developer + Tester Agent | ~30 min |
-| **Totale** | | **~2h55min** |
-
-Rimangono ~2 ore per debugging, demo prep e presentazione.
-
----
-
-### Ciclo per ogni Issue
-
-```
-Orchestrator dispatcha Developer Agent (worktree git isolato)
-    │
-    ▼
-Developer Agent
-    ├── legge docs/features/<id>/ + sezione rilevante del design doc
-    ├── implementa feature + unit test
-    ├── committa su feature branch
-    └── notifica Orchestrator → "done"
-    │
-    ▼
-Code Review Agent
-    ├── analizza diff della feature branch
-    ├── posta commenti inline se necessario
-    └── approva o richiede fix → torna a Developer Agent
-    │
-    ▼
-GitHub PM Agent
-    ├── apre PR feature branch → main
-    ├── aggiorna Project item → "Pronto al Merge"
-    └── ⛔ GATE UMANO: merge manuale dopo review PR
-    │
-    ▼ (solo Issue #6)
-Tester Agent
-    ├── verifica happy path manualmente (no Playwright in MVP)
-    └── segnala problemi → Orchestrator → Developer Agent
-```
-
----
-
-### Cosa rimane al piano di implementazione
-
-Il file `docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md` contiene il codice completo per ogni Issue. Il Developer Agent lo legge come contesto per implementare correttamente ogni feature.
