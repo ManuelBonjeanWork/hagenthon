@@ -1,0 +1,8 @@
+.hub { text-align: center; padding: 48px 24px; }
+.hub-title { font-size: 2rem; font-weight: 700; margin-bottom: 40px; }
+.hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto; }
+.situation-card { background: var(--color-surface); border: 2px solid var(--color-border); border-radius: 16px; padding: 32px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; transition: all 0.2s; text-align: center; }
+.situation-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 12px rgba(37,99,235,0.15); transform: translateY(-2px); }
+.card-emoji { font-size: 2.5rem; }
+.card-titolo { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
+.card-desc { font-size: 0.9rem; color: var(--color-text-muted); }
