@@ -21,7 +21,9 @@ Il piano (`docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md`) contiene il 
 
 ## I test che hanno trovato qualcosa restano
 
-Se hai scritto un test per riprodurre un difetto e quel test è diventato rosso, **committalo**. Hai già la prova che discrimina: è la rete che impedisce al bug di tornare in silenzio. Cancellarlo dopo il fix butta via l'unica parte del lavoro che continua a lavorare da sola.
+Un test che riproduce un difetto va **rosso, poi risolto, poi committato verde**. Il rosso dimostra che discrimina; il verde è il deliverable. Non consegnare mai un test rosso: quello documenta il bug invece di ripararlo, e lascia la suite sporca per tutti gli altri.
+
+Una volta verde, **committalo**: è la rete che impedisce al difetto di tornare in silenzio. Cancellarlo dopo il fix butta via l'unica parte del lavoro che continua a lavorare da sola.
 
 Vale anche quando il piano non prevede test per la tua Issue: un test di regressione su un difetto confermato è sempre in perimetro. Aggiungilo anche alla tua sezione del piano, così la prossima esecuzione parte già coperta.
 
