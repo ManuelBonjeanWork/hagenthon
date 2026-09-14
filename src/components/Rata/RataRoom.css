@@ -1,0 +1,18 @@
+/* RataRoom.css */
+.rata-room { display: flex; flex-direction: column; gap: 24px; }
+.back-btn { align-self: flex-start; background: none; border: none; color: var(--color-primary); font-size: 0.9rem; padding: 0; cursor: pointer; }
+.room-title { font-size: 1.5rem; font-weight: 700; }
+.rata-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+@media (max-width: 768px) { .rata-grid { grid-template-columns: 1fr; } }
+.loan-form { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px; align-self: start; }
+.form-field { display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; font-weight: 500; }
+.input-wrap { display: flex; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
+.input-prefix, .input-suffix { padding: 8px 12px; background: var(--color-bg); color: var(--color-text-muted); font-size: 0.9rem; }
+.form-input { border: none; padding: 8px 12px; font-size: 0.95rem; flex: 1; outline: none; width: 100%; }
+.loan-visualizer { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; }
+.riepilogo { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--color-border); }
+.riepilogo-item { display: flex; justify-content: space-between; font-size: 0.95rem; }
+.riepilogo-item.highlight { background: #fff7ed; padding: 10px 12px; border-radius: var(--radius); border: 1px solid #fed7aa; }
+.riepilogo-item.highlight strong { color: #ea580c; }
+.grafico-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; color: var(--color-text-muted); }
+.rata-spiegazione { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius); padding: 16px 20px; font-size: 0.9rem; line-height: 1.6; }
