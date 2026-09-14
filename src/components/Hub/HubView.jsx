@@ -12,6 +12,7 @@ export default function HubView() {
   const { setView, setGlossaryOpen } = useApp()
   return (
     <div className="hub">
+      <h1 className="hub-title">Cosa vuoi capire oggi?</h1>
       <div className="hub-grid">
         {CARDS.map(card => (
           <SituationCard key={card.id} emoji={card.emoji} titolo={card.titolo} descrizione={card.descrizione}

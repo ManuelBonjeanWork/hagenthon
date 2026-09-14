@@ -35,15 +35,16 @@ describe('Flusso utente completo', () => {
   it('l\'Hub presenta le 3 situazioni', () => {
     render(<App />)
     expect(screen.getByText('Cosa vuoi capire oggi?')).toBeInTheDocument()
-    expect(screen.getByText('La mia bolletta')).toBeInTheDocument()
+    expect(screen.getByText('Bolletta della luce')).toBeInTheDocument()
     expect(screen.getByText('Un prestito o una rata')).toBeInTheDocument()
-    expect(screen.getByText('Parole difficili')).toBeInTheDocument()
+    // 'Glossario' compare anche nel bottone dell'header: serve il ruolo per disambiguare
+    expect(screen.getByRole('heading', { name: 'Glossario' })).toBeInTheDocument()
   })
 
   it('una voce di bolletta apre la spiegazione corrispondente', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByText('La mia bolletta'))
+    await user.click(screen.getByText('Bolletta della luce'))
     expect(screen.getByText('⚡ La tua bolletta della luce')).toBeInTheDocument()
     await user.click(screen.getByText('Oneri di Sistema'))
     expect(screen.getByText(/Sono costi fissi che tutti i clienti italiani pagano/)).toBeInTheDocument()
@@ -52,7 +53,7 @@ describe('Flusso utente completo', () => {
   it('il link della spiegazione apre il glossario sul termine giusto', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByText('La mia bolletta'))
+    await user.click(screen.getByText('Bolletta della luce'))
     await user.click(screen.getByText('Oneri di Sistema'))
     await user.click(screen.getByRole('button', { name: /oneri sistema/i }))
     expect(screen.getByRole('heading', { name: /Glossario/ })).toBeInTheDocument()
@@ -74,7 +75,7 @@ describe('Flusso utente completo', () => {
   it('il LevelSelector cambia il testo delle spiegazioni', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByText('La mia bolletta'))
+    await user.click(screen.getByText('Bolletta della luce'))
     await user.click(screen.getByText('Oneri di Sistema'))
     await user.click(screen.getByText('🔬 Tecnico'))
     expect(screen.getByText(/delibera ARERA ARG\/elt 199\/11/)).toBeInTheDocument()
@@ -90,7 +91,7 @@ describe('Flusso utente completo', () => {
   it('ai valori di default la simulazione riproduce la bolletta di esempio', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByText('La mia bolletta'))
+    await user.click(screen.getByText('Bolletta della luce'))
     // 180 kWh / 3 kW / giorno → differenza esattamente zero
     expect(screen.getByText(/\+€0\.00\/mese/)).toBeInTheDocument()
   })
