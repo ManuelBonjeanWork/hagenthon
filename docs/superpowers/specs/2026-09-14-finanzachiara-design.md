@@ -353,6 +353,66 @@ Spiegazione contestuale sotto il grafico, al livello corrente.
 - **Parsing testo incollato** → stesso flusso per bollette digitali
 - **Spiegazioni dinamiche** → livelli linguistici più granulari, personalizzazione per contesto
 
+### Fase 2b — Agenti AI
+
+Ogni agente ha un perimetro educativo preciso e non può uscire dal proprio dominio. Nessuno fornisce raccomandazioni — operano tutti in modalità "spiega" o "estrai", mai "consiglia".
+
+#### 🔍 Document Parser Agent
+**Trigger:** l'utente carica o incolla una bolletta/documento reale  
+**Compito:** estrae strutturato (JSON) le voci, gli importi e le sigle dal testo grezzo  
+**Output:** alimenta BillViewer con i dati reali al posto della bolletta di esempio  
+**Vincolo:** non interpreta né commenta i valori — li passa alla logica deterministica esistente  
+**Stack:** Claude API con tool use → JSON schema delle voci bolletta
+
+#### 🗣️ Language Adapter Agent
+**Trigger:** l'utente chiede una spiegazione con parole diverse o fa una domanda libera su una voce  
+**Compito:** genera una spiegazione contestuale al livello corrente per quel termine specifico  
+**Output:** testo nella ExplanationPanel, in aggiunta (non in sostituzione) al contenuto pre-scritto  
+**Vincolo:** risponde solo su termini/voci del documento attivo, rifiuta domande su investimenti o prodotti  
+**Stack:** Claude API con system prompt ristretto + contesto della voce attiva
+
+#### 📖 Glossary Enricher Agent
+**Trigger:** l'utente cerca nel glossario un termine non presente nel dataset pre-costruito  
+**Compito:** genera al volo la definizione al livello corrente per il termine cercato  
+**Output:** nuova voce nel GlossaryPanel, marcata come "generata" vs "verificata"  
+**Vincolo:** genera solo definizioni di termini finanziari generici, non valutazioni su prodotti specifici  
+**Stack:** Claude API + cache locale delle definizioni generate per non ripetere chiamate
+
+#### 🔄 Document Comparison Agent
+**Trigger:** l'utente carica due bollette (es. mese corrente vs mese precedente)  
+**Compito:** confronta voce per voce, identifica variazioni significative, le evidenzia  
+**Output:** vista "diff" sovrapposta alla BollettaRoom con delta colorati per ogni voce  
+**Vincolo:** mostra solo variazioni fattuali ("+€3.20 su quota energia"), non giudica se è normale o no  
+**Stack:** Claude API con due documenti in contesto → output diff strutturato
+
+#### 🧭 Onboarding Guide Agent
+**Trigger:** primo accesso o clic su "Non so da dove iniziare"  
+**Compito:** dialogo breve a domande/risposte per capire la situazione dell'utente (ha una bolletta? vuole capire un prestito? non sa nulla?) e guidarlo alla card giusta  
+**Output:** raccomanda la situation card più rilevante e imposta il livello linguistico iniziale  
+**Vincolo:** non fa domande su importi, redditi o situazioni personali — solo sul tipo di documento/scenario  
+**Stack:** Claude API con conversazione a turni limitati (max 3 scambi) + mapping output → view
+
+---
+
+### Architettura agenti (schema generale)
+
+```
+Utente
+  │
+  ▼
+Frontend React (MVP deterministico)
+  │
+  ├─── Document Parser Agent ──→ JSON voci → BillViewer
+  ├─── Language Adapter Agent ──→ testo → ExplanationPanel
+  ├─── Glossary Enricher Agent ──→ definizione → GlossaryPanel
+  ├─── Document Comparison Agent ──→ diff → BollettaRoom overlay
+  └─── Onboarding Guide Agent ──→ view suggerita + livello iniziale
+```
+
+Ogni agente è stateless e isolato — non condividono contesto tra loro. Il frontend rimane la fonte di verità per navigazione e stato.
+
+---
+
 ### Fase 3 — Espansione scenari
 - Card "Estratto conto bancario" — spiegazione di commissioni, movimenti, saldo disponibile vs contabile
 - Card "Busta paga" — capire netto vs lordo, trattenute, TFR
