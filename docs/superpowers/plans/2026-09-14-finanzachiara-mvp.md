@@ -1272,17 +1272,23 @@ git push origin feature/3-bollettaroom
 - [ ] **4.1 — Crea `GlossarySearch.jsx`**
 
 ```jsx
-export default function GlossarySearch({ value, onChange, autoFocus }) {
+import { forwardRef } from 'react'
+
+// Niente autoFocus: il focus alla ricerca lo da' GlossaryPanel in modo imperativo,
+// dentro lo stesso effect che cattura il focus precedente (vedi commento in GlossaryPanel).
+// Con autoFocus sul JSX, React lo applica in fase di commit prima che l'effect giri, quindi
+// la cattura di document.activeElement prenderebbe questo input invece del trigger di apertura.
+const GlossarySearch = forwardRef(function GlossarySearch({ value, onChange }, ref) {
   return (
     <div className="glossary-search">
       <span className="search-icon" aria-hidden="true">🔍</span>
-      {/* autoFocus solo quando il pannello si apre "vuoto": se arriva da un link
-          su un termine, il focus deve restare su quel termine, non sulla ricerca. */}
-      <input type="search" aria-label="Cerca un termine nel glossario" placeholder="Cerca un termine..."
-        value={value} onChange={e => onChange(e.target.value)} className="search-input" autoFocus={autoFocus} />
+      <input ref={ref} type="search" aria-label="Cerca un termine nel glossario" placeholder="Cerca un termine..."
+        value={value} onChange={e => onChange(e.target.value)} className="search-input" />
     </div>
   )
-}
+})
+
+export default GlossarySearch
 ```
 
 - [ ] **4.2 — Crea `GlossaryTerm.jsx`**
@@ -1347,12 +1353,30 @@ export default function GlossaryPanel() {
   const perLettera = useMemo(() => terminiVisibili.reduce((acc, t) => { const l = t.lettera; if (!acc[l]) acc[l] = []; acc[l].push(t); return acc }, {}), [terminiVisibili])
   function handleClose() { setGlossaryOpen(false); setActiveGlossaryTerm(null); setQuery('') }
 
+  // Un correlato puo' puntare a un termine escluso dal filtro di ricerca corrente: se cosi',
+  // il suo <GlossaryTerm> non verrebbe mai renderizzato (niente scroll, niente espansione, e
+  // si perderebbe pure il termine che si stava leggendo). Azzeriamo la query SOLO quando serve
+  // -- il termine attivo non e' tra quelli visibili -- altrimenti si romperebbe il caso normale:
+  // l'utente cerca, clicca un risultato gia' visibile, e si aspetta che il filtro resti.
+  useEffect(() => {
+    if (activeGlossaryTerm && !terminiVisibili.some(t => t.id === activeGlossaryTerm)) {
+      setQuery('')
+    }
+  }, [activeGlossaryTerm, terminiVisibili])
+
   // Esc chiude, e il focus torna dov'era prima dell'apertura: senza questo chi naviga
   // da tastiera resta bloccato in fondo alla pagina dopo aver chiuso il pannello.
   const focusPrecedente = useRef(null)
+  const searchRef = useRef(null)
   useEffect(() => {
     if (!glossaryOpen) return
+    // La cattura deve avvenire PRIMA che qualsiasi elemento del pannello riceva il focus:
+    // percio' niente autoFocus nel JSX (scatterebbe in fase di commit, prima di questo
+    // effect) e il focus alla ricerca e' dato qui sotto, imperativamente, dopo la cattura.
     focusPrecedente.current = document.activeElement
+    // Il focus va alla ricerca solo quando il pannello si apre "vuoto": se arriva da un
+    // link su un termine, il focus deve restare su quel termine, non sulla ricerca.
+    if (!activeGlossaryTerm) searchRef.current?.focus()
     function onKeyDown(e) { if (e.key === 'Escape') handleClose() }
     document.addEventListener('keydown', onKeyDown)
     return () => {
@@ -1367,7 +1391,7 @@ export default function GlossaryPanel() {
       <div className="glossary-backdrop" onClick={handleClose} aria-hidden="true" />
       <aside className="glossary-panel" role="dialog" aria-modal="true" aria-label="Glossario">
         <div className="glossary-header"><h2>📖 Glossario</h2><button className="close-btn" onClick={handleClose} aria-label="Chiudi il glossario">✕</button></div>
-        <div className="glossary-search-wrap"><GlossarySearch value={query} onChange={setQuery} autoFocus={!activeGlossaryTerm} /></div>
+        <div className="glossary-search-wrap"><GlossarySearch ref={searchRef} value={query} onChange={setQuery} /></div>
         <div className="glossary-list">
           {Object.keys(perLettera).sort().map(lettera => (
             <section key={lettera} className="lettera-group">
@@ -1378,7 +1402,7 @@ export default function GlossaryPanel() {
               ))}
             </section>
           ))}
-          {terminiVisibili.length === 0 && <p className="no-results">Nessun termine trovato per "{query}"</p>}
+          {terminiVisibili.length === 0 && <p className="no-results">Nessun termine trovato per «{query}»</p>}
         </div>
       </aside>
     </>
@@ -1414,7 +1438,116 @@ export default function GlossaryPanel() {
 .no-results { padding: 20px; text-align: center; color: var(--color-text-muted); }
 ```
 
-- [ ] **4.4 — Commit**
+- [ ] **4.4 — Crea `tests/GlossaryPanel.test.jsx`**
+
+```jsx
+// tests/GlossaryPanel.test.jsx
+//
+// Test di regressione per due bug reali del GlossaryPanel (Issue #4, PR #14),
+// trovati dal Code Review Agent e poi corretti. Non sono verifiche di cortesia
+// sull'accessibilita': ognuno dei due describe qui sotto e' la rete su un
+// difetto che si e' gia' manifestato una volta.
+//
+// 1. "ripristino del focus alla chiusura" copre l'ordinamento autoFocus vs
+//    useEffect: React applica autoFocus in fase di commit, prima che giri lo
+//    useEffect che cattura document.activeElement. Se il pannello si apriva
+//    senza termine attivo, l'effect catturava l'input di ricerca appena
+//    auto-focussato invece del bottone che aveva aperto il pannello; alla
+//    chiusura quell'input era smontato e il focus finiva su <body>. Il fix
+//    toglie autoFocus dal JSX e da' il focus in modo imperativo, nello stesso
+//    effect, subito dopo la cattura.
+//
+// 2. "link ai termini correlati con ricerca attiva" copre il reset mirato
+//    della query: openGlossaryTerm aggiorna solo il Context, non la query
+//    locale del pannello. Se il termine di destinazione era escluso dal
+//    filtro corrente, il suo <GlossaryTerm> non veniva mai renderizzato --
+//    niente scroll, niente espansione. Il fix azzera la query SOLO quando il
+//    termine attivo non e' tra quelli visibili, per non rompere il caso
+//    normale (cerca, clicca un risultato gia' visibile, il filtro resta).
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { AppProvider, useApp } from '../src/context/AppContext'
+import GlossaryPanel from '../src/components/Glossario/GlossaryPanel'
+
+beforeAll(() => {
+  window.HTMLElement.prototype.scrollIntoView = vi.fn()
+})
+
+// Harness minimo: i due modi in cui l'app apre il pannello davvero -- un
+// bottone che lo apre "vuoto" e un link che lo apre gia' su un termine.
+function Harness() {
+  const { setGlossaryOpen, openGlossaryTerm } = useApp()
+  return (
+    <div>
+      <button onClick={() => setGlossaryOpen(true)}>apri-senza-termine</button>
+      <button onClick={() => openGlossaryTerm('accisa')}>apri-con-termine</button>
+      <GlossaryPanel />
+    </div>
+  )
+}
+
+// Ogni test chiama renderHarness() da se': niente stato condiviso tra test,
+// niente dipendenza dall'ordine di esecuzione.
+function renderHarness() {
+  render(<AppProvider><Harness /></AppProvider>)
+}
+
+describe('GlossaryPanel — ripristino del focus alla chiusura', () => {
+  const aperture = [
+    ['senza termine attivo', 'apri-senza-termine'],
+    ['con termine attivo', 'apri-con-termine'],
+  ]
+  const chiusure = [
+    ['Esc', (user) => user.keyboard('{Escape}')],
+    ['backdrop', (user) => user.click(document.querySelector('.glossary-backdrop'))],
+    ['bottone X', (user) => user.click(screen.getByLabelText('Chiudi il glossario'))],
+  ]
+
+  describe.each(aperture)('apertura %s', (_l, triggerText) => {
+    it.each(chiusure)('chiusura via %s riporta il focus sul trigger', async (_cl, closeFn) => {
+      const user = userEvent.setup()
+      renderHarness()
+      const trigger = screen.getByText(triggerText)
+      trigger.focus()
+      expect(document.activeElement).toBe(trigger)
+      await user.click(trigger)
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      await closeFn(user)
+      expect(document.activeElement).toBe(trigger)
+    })
+  })
+})
+
+describe('GlossaryPanel — link ai termini correlati con ricerca attiva', () => {
+  it('correlato escluso dal filtro: cerca "accisa" -> espandi "Accisa" -> click su "iva" -> IVA compare espanso', async () => {
+    const user = userEvent.setup()
+    renderHarness()
+    await user.click(screen.getByText('apri-senza-termine'))
+
+    const searchInput = screen.getByRole('searchbox')
+    await user.type(searchInput, 'accisa')
+    await user.click(screen.getByText('Accisa'))
+    await user.click(screen.getByRole('button', { name: 'iva' }))
+
+    expect(screen.getByText('IVA')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /IVA/ })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('caso normale: cerca "TAN", clicca il risultato visibile, il filtro resta', async () => {
+    const user = userEvent.setup()
+    renderHarness()
+    await user.click(screen.getByText('apri-senza-termine'))
+
+    const searchInput = screen.getByRole('searchbox')
+    await user.type(searchInput, 'TAN')
+    await user.click(screen.getByRole('button', { name: /^TAN/ }))
+
+    expect(searchInput).toHaveValue('TAN')
+  })
+})
+```
+
+- [ ] **4.5 — Commit**
 
 ```bash
 git add -A
