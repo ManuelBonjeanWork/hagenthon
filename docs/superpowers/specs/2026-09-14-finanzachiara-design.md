@@ -432,6 +432,94 @@ Agenti rivolti agli sviluppatori — operano offline, in fase di sviluppo e manu
 
 ---
 
+#### Convenzione documenti generati
+
+Tutti i documenti prodotti dagli agenti durante il ciclo di sviluppo (spec funzionale, design doc, piano di implementazione) vengono salvati dentro il repository nella cartella `docs/`, seguendo questa struttura:
+
+```
+docs/
+├── superpowers/
+│   └── specs/              ← design doc architetturali (es. questo file)
+├── features/
+│   └── <issue-id>-<slug>/  ← tutti i doc generati per una feature specifica
+│       ├── functional-spec.md
+│       ├── design.md
+│       └── implementation-plan.md
+└── adr/                    ← Architecture Decision Records (generati dal Code Review Agent)
+```
+
+Il GitHub PM Agent crea la cartella `docs/features/<issue-id>-<slug>/` al momento della creazione della feature branch, e ogni agente salva i propri output lì. Alla chiusura dell'Issue, la cartella diventa documentazione permanente della feature.
+
+---
+
+#### Agentic SDLC Pipeline
+
+Pipeline completo per lo sviluppo di nuove feature, con GitHub come unico canale di coordinamento tra agenti. Ogni cambio di stato aggiorna il GitHub Project item — nessun canale parallelo, tutto tracciato.
+
+```
+Requisito (testo libero o Issue esistente)
+   │
+   ▼
+① GitHub PM Agent ── crea GitHub Issue + Project item [status: "Analisi"]
+   │                  crea cartella docs/features/<issue-id>-<slug>/
+   │
+   ▼
+② Analyst Agent ───── legge l'Issue
+   │                  fa domande di chiarimento via commenti sull'Issue
+   │                  genera:
+   │                    - functional-spec.md  → docs/features/<id>/functional-spec.md
+   │                    - design.md           → docs/features/<id>/design.md
+   │                    - implementation-plan.md → docs/features/<id>/implementation-plan.md
+   │                  posta link ai documenti come commento sull'Issue
+   │                  [status: "In Revisione Spec"]
+   │
+   ▼
+⛔ GATE UMANO ──────── developer legge spec + piano su GitHub
+   │                  approva aggiungendo label "spec-approved"
+   │                  oppure chiede modifiche via commento → torna a ②
+   │
+   ▼
+③ GitHub PM Agent ── crea feature branch `feature/<issue-id>-<slug>`
+   │                  [status: "In Sviluppo"]
+   │
+   ▼
+④ Developer Agent ── legge spec + piano dai file in docs/features/<id>/
+   │                  implementa la feature su feature branch
+   │                  scrive unit test
+   │                  committa e posta commento sull'Issue con summary
+   │                  [status: "In Code Review"]
+   │
+   ▼
+⑤ Code Review Agent ── analizza diff della feature branch
+   │                    posta commenti inline sulla PR (o sull'Issue se PR non ancora aperta)
+   │                    se KO → aggiunge label "needs-fixes" → torna a ④
+   │                    se OK → [status: "In Test E2E"]
+   │
+   ▼
+⑥ Tester Agent ──────── legge feature branch + functional-spec.md
+   │                     crea o modifica test Playwright in e2e/
+   │                     salva log di esecuzione in docs/features/<id>/test-report.md
+   │                     se FAIL → aggiunge label "needs-fixes" + commento con log → torna a ④
+   │                     se PASS → [status: "Pronto al Merge"]
+   │
+   ▼
+⑦ GitHub PM Agent ── apre PR dalla feature branch verso main
+   │                  corpo PR include: link all'Issue, link ai doc, summary test
+   │                  chiude Issue a merge avvenuto (via "Closes #N" nel corpo PR)
+   │                  [status: "Done"]
+```
+
+**Strumenti GitHub utilizzati:**
+- **GitHub Issues** — requisiti, domande Analyst, approvazioni, log Tester
+- **GitHub Projects** — Project item con status board per tracciare ogni feature nel pipeline
+- **GitHub Pull Requests** — aperte dal GitHub PM Agent, corpo auto-generato
+- **GitHub Labels** — `spec-approved`, `needs-fixes`, `in-review`, `e2e-passed` per coordinare i passaggi
+- **GitHub Branches** — create dal GitHub PM Agent con naming convention `feature/<issue-id>-<slug>`
+
+**Principio di isolamento:** ogni agente conosce solo il proprio step. Il contesto si passa attraverso i file in `docs/features/` e i commenti sull'Issue — non esiste comunicazione diretta tra agenti.
+
+---
+
 ### Fase 2 — AI Layer
 - **Upload bolletta reale** → AI (Claude) estrae le voci e i valori → alimenta BillViewer con i dati reali dell'utente
 - **Parsing testo incollato** → stesso flusso per bollette digitali
