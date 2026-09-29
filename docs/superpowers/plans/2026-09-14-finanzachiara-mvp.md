@@ -9,7 +9,7 @@
 > **Root dell'app:** la radice del repo. `src/`, `tests/`, `vite.config.js` convivono con `docs/` e `tema.md`.
 > **Branch di integrazione:** `main`, creata da `develop` in Phase 0.2. Tutte le PR puntano lì.
 
-**Goal:** Costruire l'MVP di FinanzaChiara in ~2h45min–3h end-to-end (~2h03min di solo sviluppo) usando il pipeline agentico: Orchestrator Agent coordina 8 Issue (0, 1a, 1b, 2, 3, 4, 5, 6), con due finestre di parallelismo — AppContext+DataLayer e i 4 componenti UI — per ridurre al minimo la critical path.
+**Goal:** Costruire l'MVP di FinanzaChiara in ~2h45min–3h end-to-end (~2h03min di solo sviluppo), in autonomia e senza approvazioni umane bloccanti: Orchestrator Agent coordina 8 Issue (0, 1a, 1b, 2, 3, 4, 5, 6), con due finestre di parallelismo — AppContext+DataLayer e i 4 componenti UI — per ridurre al minimo la critical path.
 
 **Architecture:** React 18 + Vite 5 client-side. Stato globale via React Context. Navigazione tramite stato (no router). Contenuto finanziario pre-scritto in `data/`.
 
@@ -19,10 +19,10 @@
 
 | Agente | Modello | Motivazione |
 |--------|---------|-------------|
-| **Orchestrator Agent** | `claude-opus-5` | Ragionamento complesso: legge il piano, valuta dipendenze, decide quando parallelizzare, gestisce i gate umani |
+| **Orchestrator Agent** | `claude-opus-5` | Legge il piano, valuta dipendenze, decide quando parallelizzare. Coordina, apre PR e mergia: **non approva codice** — la qualità la producono i gate automatici |
 | **Developer Agent** | `claude-sonnet-5` | Scrittura di codice React completo da spec; bilanciamento tra qualità e velocità |
 | **Code Review Agent** | `claude-sonnet-5` | Analisi critica del codice, verifica criteri architetturali e copy, feedback strutturato |
-| **Tester Agent** | `claude-sonnet-5` | Scrive `tests/integrazione.test.jsx` in Issue #6.5: il flusso utente end-to-end con React Testing Library. Nessun framework E2E (Playwright/Cypress) è installato e non c'è tempo per aggiungerlo — RTL su `<App />` copre gli stessi percorsi |
+| **Tester Agent** | `claude-sonnet-5` | Scrive `tests/integrazione.test.jsx` in Issue #6.5: il flusso utente end-to-end con React Testing Library. Nessun framework E2E è installato — RTL su `<App />` copre gli stessi percorsi |
 | **GitHub PM Agent** | `claude-haiku-4-5-20251001` | Task meccanici e ripetibili: creare Issue, aprire PR, aggiornare label e Projects board |
 
 ## Global Constraints
@@ -67,12 +67,13 @@ Issue #6 — Integrazione + test + build (~30 min · SEQUENZIALE)
 **Tempo di sviluppo sulla critical path:** ~10 + ~8 + ~20 + ~55 + ~30 = **~2h03min**
 (vs struttura precedente a 6 Issue: ~2h55min — risparmio ~50 min)
 
-⚠️ **Non è il tempo end-to-end.** Ogni Issue attraversa Code Review Agent → gate umano → merge
-prima di sbloccare le dipendenti; quei minuti sono sulla critical path, non a lato.
-Contando ~5–7 min per ciclo su 6 punti di sincronizzazione (#0, #1a+#1b, #2–#5, #6):
-**+40/60 min → stima realistica ~2h45min – 3h.**
-I due colli di bottiglia sono i gate dopo #1a/#1b e quello dopo i 4 componenti paralleli:
-lì l'Orchestrator è bloccato su un umano, non su un agente.
+⚠️ **Non è il tempo end-to-end.** Ogni Issue attraversa Code Review Agent → merge prima di
+sbloccare le dipendenti, e quei minuti sono sulla critical path. La review non è veloce:
+verifica eseguendo — ricalcola i numeri, scrive script di controllo, riesegue i test —
+e su questa base costa quanto lo sviluppo che controlla.
+**Stima realistica end-to-end: ~2h45min – 3h.**
+
+Nessun gate umano bloccante: la supervisione è continua e non ferma il pipeline.
 
 ### Status board GitHub Projects
 
@@ -83,7 +84,7 @@ Campo custom **"Stato Pipeline"** sul project 2 (creato in 0.4):
 | `Queued` | Issue creata, dipendenze non soddisfatte |
 | `In Sviluppo` | Developer Agent attivo |
 | `In Code Review` | Code Review Agent attivo |
-| `Pronto al Merge` | PR aperta, attende gate umano |
+| `Pronto al Merge` | Review approvata, merge imminente |
 | `Done` | PR mergiata, Issue chiusa |
 
 ### Labels GitHub
@@ -144,7 +145,7 @@ gh repo edit --default-branch main
 gh label create queued               --color ededed --description "Dipendenze non soddisfatte"            --force
 gh label create needs-fixes          --color d93f0b --description "Code Review Agent richiede modifiche"  --force
 gh label create code-review-approved --color 0e8a16 --description "Code Review Agent ha approvato"        --force
-gh label create ready-to-merge       --color 1d76db --description "In attesa del gate umano"              --force
+gh label create ready-to-merge       --color 1d76db --description "Review approvata, merge imminente"     --force
 ```
 
 - [ ] **0.3 — GitHub PM Agent crea tutte e 8 le Issue** *(in parallelo con 0.1)*
@@ -1932,6 +1933,17 @@ Per ogni PR, il Code Review Agent verifica:
 - Import non usati rimossi
 - Nessun `console.log` nel codice committato
 - CSS in file separati, nessun inline style tranne valori dinamici (`style={{ color: var }}`)
+
+**Gate — vale per ogni Issue, senza eccezioni**
+
+Non esiste approvazione umana a valle: questi quattro controlli sono l'unico meccanismo di qualità. Ogni buco diventa debito che nessuno intercetta.
+
+- `npm run build` esce con 0
+- `npm run test` verde, e il numero di test atteso torna
+- **`npm run lint` senza errori** — non era nel gate iniziale, e per questo sono passati in silenzio 3 `react/no-unescaped-entities` e una config che segnalava `no-undef` su ogni file di test
+- il **verdetto di review è scritto sulla PR**, approvato o no. Se resta nella conversazione, il repo mostra PR mergiate senza traccia e i rilievi minori si perdono con la sessione
+
+**Se il difetto viene da questo piano, si corregge anche il piano** nello stesso commit: altrimenti la prossima esecuzione lo riproduce.
 
 **Test**
 - Per Issue #1: unit test passanti per `loanCalculator` e `AppContext`

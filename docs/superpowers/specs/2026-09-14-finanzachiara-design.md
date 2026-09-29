@@ -28,120 +28,168 @@ Entrambi gli scenari sono **educativi e non consulenziali**: il sistema non dice
 
 ## 3. Come costruiamo: Agentic SDLC Pipeline
 
-FinanzaChiara viene costruita usando il pipeline agentico come metodo di sviluppo primario — non solo come roadmap futura. L'**Orchestrator Agent** coordina tutto; l'umano approva solo ai gate.
+FinanzaChiara è stata costruita con questo pipeline, non secondo questo pipeline: quanto segue descrive ciò che è stato eseguito davvero, e le regole sono quelle che l'esecuzione ha imposto.
+
+**Risultato:** 8 Issue, 12 PR, 28 test, zero approvazioni umane bloccanti.
+
+### Il contratto condiviso
+
+Il punto di partenza, e la correzione più importante rispetto alla prima stesura di questo documento. Gli agenti sono *stateless* perché leggono file versionati, **non** perché l'Orchestrator si ricorda tutto e glielo racconta nel prompt.
+
+| Artefatto | Cosa contiene | Perché serve |
+|---|---|---|
+| `CLAUDE.md` | vincolo anti-raccomandazione, valori esatti dei livelli e delle viste, mapping ID-piano → numero Issue GitHub | ogni agente lo legge; nessuno deve dedurlo |
+| `.claude/agents/*.md` | contratto di ruolo: developer, code-reviewer, tester, github-pm | definisce *come* si lavora, non solo cosa |
+| `docs/pipeline-state.json` | grafo delle dipendenze, ID di board e campi, stato per Issue | permette di riprendere dopo un'interruzione |
+
+Quando questa conoscenza vive nei prompt invece che nei file, si degrada: un'istruzione data per un caso (*"verifica con uno script usa-e-getta"*) è stata generalizzata da un agente a un caso diverso, e ha portato alla cancellazione di 8 test di regressione. La regola è stata poi scritta in `developer.md`, dove non può più perdersi.
 
 ### Orchestrator Agent
 
-Cervello del pipeline. Unico agente con visione del grafo delle dipendenze. Tutti gli altri agenti sono stateless — solo l'Orchestrator sa cosa viene prima e dopo.
+Unico agente con visione del grafo. Non esegue codice applicativo: coordina, apre PR, mergia, aggiorna la board.
 
-**Avvio:** invocato una volta dall'umano con il plan doc come input.  
-**Compito:**
-1. Estrae il grafo delle dipendenze dal piano
-2. Monitora GitHub Projects API per i cambi di status
-3. Quando le dipendenze di un'Issue sono "Done" → dispatcha Developer Agent (worktree isolato)
-4. **Issue indipendenti vengono dispatchate in parallelo** — più Developer Agent simultaneamente
-5. Developer Agent completo → dispatcha Code Review Agent
-6. Code Review approva → dispatcha GitHub PM Agent → PR
-7. Notifica l'umano **solo** ai gate di approvazione
-8. Fallimento → riprova una volta, poi notifica con log
+1. Legge il piano e costruisce `pipeline-state.json`
+2. Dispatcha un Developer Agent quando le dipendenze di un'Issue sono chiuse — **in worktree isolato**
+3. Issue indipendenti partono insieme: 2 in parallelo su #1a/#1b, 4 su #2–#5
+4. **Reagisce alle notifiche di completamento degli agent**, non fa polling della board
+5. Al completamento: apre la PR, dispatcha il Code Review Agent
+6. Review approvata → mergia. Review negativa → rimanda al Developer con i rilievi scritti sulla PR
+7. Fallimento → **si ferma e riporta comando esatto ed errore**. Nessun retry automatico
 
-**Stato persistente:** `docs/pipeline-state.json` — permette ripresa in caso di interruzione.
+> **Perché niente retry.** Nessuno dei fallimenti reali è stato transitorio: script `test` mancante, label inesistenti, valore atteso sbagliato in un test, `create-vite` fermo su un prompt interattivo. Riprovare avrebbe fallito identico, due volte più lentamente. Il retry si riserva a rete e rate limit.
 
----
+> **Perché niente polling della board.** La board è un *output*: leggibile dall'umano, non è il canale di coordinamento. Durante l'esecuzione è rimasta ferma per mezza sessione — scriveva su un campo custom mentre la vista era raggruppata su `Status` — e il pipeline ha continuato a funzionare. Se fosse stata il canale, si sarebbe bloccato tutto.
 
-### 8 Issue e grafo delle dipendenze ottimizzato
+### Worktree: è ciò che rende reale il parallelismo
+
+Non è un dettaglio implementativo. Due agenti nella stessa working tree si sovrascrivono, e durante questa sessione è successo davvero: un tentativo concorrente ha lasciato uno scaffold Vite fuori specifica che è stato necessario cancellare e rifare.
+
+Regole che discendono dall'isolamento:
+
+- ogni worktree parte senza `node_modules`: serve `npm ci` prima di qualsiasi test
+- `main` non è checkoutabile in due worktree: gli agenti creano il branch da `origin/main`
+- **vitest scandisce i worktree**. Senza escludere `.claude/` dalla config, `npm run test` raccoglie i test di tutti i branch in volo: durante l'esecuzione ha prodotto `36 failed | 61 passed (97)` su una `main` sana
+- i worktree vanno rimossi con `git worktree remove`; `prune` da solo non tocca le directory ancora presenti
+
+### 8 Issue e grafo delle dipendenze
 
 ```
-Phase 0 (~10 min, PARALLELO):
-  Orchestrator legge piano  +  GitHub PM Agent crea repo, board, 8 Issue
+Phase 0 — contratto condiviso, branch, label, Issue, board
         │
         ▼
-Issue #0: Scaffolding (~8 min, SEQUENZIALE)
-  npm create vite, install deps, vite.config, App.jsx shell, App.css
+Issue #0 — Scaffolding (SEQUENZIALE: il progetto Vite deve esistere)
         │
-   ┌────┴───────────────────────────┐
-   ▼                                ▼
-Issue #1a: AppContext (~15 min)  Issue #1b: Data Layer (~20 min)   ← PARALLELO
-  AppContext.jsx + test             loanCalculator.js
-                                    bolletta.js / glossario.js
-                                    rata.js + test
-   └────┬───────────────────────────┘
-        │ (entrambe Done)
-   ┌────┼──────────┬──────────┐
-   ▼    ▼          ▼          ▼
-  #2   #3         #4         #5                                     ← PARALLELO
-Header Bolletta  Glossario  RataRoom
-   └────┴──────────┴──────────┘
-        │ (tutte e 4 Done)
+   ┌────┴─────────────┐
+   ▼                  ▼
+ #1a AppContext    #1b Data Layer            ← PARALLELO
+   └────┬─────────────┘
+        │  entrambe Done
+   ┌────┼─────────┬─────────┐
+   ▼    ▼         ▼         ▼
+  #2   #3        #4        #5                ← PARALLELO
+Header Bolletta Glossario  Rata
+   └────┴─────────┴─────────┘
+        │  tutte e 4 Done
         ▼
-   Issue #6: Integrazione + polish + build (~30 min, SEQUENZIALE)
+Issue #6 — Integrazione + test end-to-end + polish
 ```
 
-| Issue | Contenuto | Dipende da | Agenti in gioco |
-|-------|-----------|-----------|----------------|
-| #0 | Scaffolding Vite + App shell + CSS | — | Developer → Code Review → PM |
-| #1a | AppContext + test | #0 | Developer → Code Review → PM |
-| #1b | loanCalculator + bolletta + glossario + rata + test | #0 | Developer → Code Review → PM |
-| #2 | Header + HubView | #1a #1b | Developer → Code Review → PM |
-| #3 | BollettaRoom completa | #1a #1b | Developer → Code Review → PM |
-| #4 | GlossaryPanel | #1a #1b | Developer → Code Review → PM |
-| #5 | RataRoom | #1a #1b | Developer → Code Review → PM |
-| #6 | Integrazione + polish + E2E | #2 #3 #4 #5 | Developer → Code Review → Tester → PM |
+| Issue | Contenuto | Dipende da |
+|-------|-----------|-----------|
+| #0 | Scaffolding Vite + shell autonoma + CSS | — |
+| #1a | AppContext + 4 test | #0 |
+| #1b | loanCalculator + bolletta + glossario + rata + 7 test | #0 |
+| #2 | Header + HubView | #1a #1b |
+| #3 | BollettaRoom completa | #1a #1b |
+| #4 | GlossaryPanel | #1a #1b |
+| #5 | RataRoom | #1a #1b |
+| #6 | Integrazione + 9 test end-to-end + polish | #2 #3 #4 #5 |
 
----
-
-### Timeline con agenti paralleli
-
-| Fase | Agenti attivi | Tempo stimato |
-|------|--------------|--------------|
-| Phase 0 | Orchestrator + GitHub PM Agent in parallelo | ~10 min |
-| Issue #0 | 1 Developer Agent (scaffolding) | ~8 min |
-| Issue #1a + #1b | 2 Developer Agent in parallelo | ~20 min (limitato da #1b) |
-| Issue #2+3+4+5 | 4 Developer Agent in parallelo | ~55 min (limitato da #3) |
-| Issue #6 | Developer + Tester Agent | ~30 min |
-| **Totale** | | **~2h03min** |
-
-> Code Review e GitHub PM Agent per ogni Issue girano non appena quella specifica Issue è pronta — non aspettano il completamento delle Issue parallele sorelle.
-
-Rimangono ~3 ore per debugging, demo prep e presentazione.
-
----
+`App.jsx` non viene toccata da #2–#5: è ciò che rende sicura la finestra a quattro agenti. Il cablaggio avviene tutto in #6, ed è la prima volta che i componenti entrano nel bundle — fino a quel momento `vite build` non li attraversa e il verde non dimostra che compilino.
 
 ### Ciclo per ogni Issue
 
 ```
-Orchestrator dispatcha Developer Agent (worktree git isolato)
-    │
-    ▼
-Developer Agent
-    ├── legge docs/features/<id>/ + sezione rilevante del design doc
-    ├── implementa feature + unit test
-    ├── committa su feature branch
-    └── notifica Orchestrator → "done"
-    │
-    ▼
-Code Review Agent
-    ├── analizza diff della feature branch
-    ├── posta commenti inline se necessario
-    └── approva o richiede fix → torna a Developer Agent
-    │
-    ▼
-GitHub PM Agent
-    ├── apre PR feature branch → main
-    ├── aggiorna Project item → "Pronto al Merge"
-    └── ⛔ GATE UMANO: merge manuale dopo review PR
-    │
-    ▼ (solo Issue #6)
-Tester Agent
-    ├── verifica happy path manualmente (no Playwright in MVP)
-    └── segnala problemi → Orchestrator → Developer Agent
+Developer Agent (worktree isolato, branch da origin/main, npm ci)
+    ├── legge .claude/agents/developer.md, CLAUDE.md, la sua sezione del piano
+    ├── implementa; dove il piano prescrive TDD, rosso prima
+    ├── gate locale: build + test + lint
+    └── committa e pusha ──► notifica
+        │
+        ▼
+Orchestrator apre la PR
+        │
+        ▼
+Code Review Agent (worktree isolato)
+    ├── verifica ESEGUENDO, non leggendo: ricalcola i numeri, esegue i test,
+    │   scrive script di controllo sui dati
+    └── verdetto SCRITTO SULLA PR, sempre — approvato o no
+        │
+   ┌────┴────────────────────┐
+   ▼                         ▼
+DA CORREGGERE             APPROVATO
+   │                         │
+ fix + test di regressione   merge
+ committato verde            │
+   │                         ▼
+ re-review              se il difetto veniva dal piano,
+   │                    lo stesso commit corregge anche il piano
+   └──────────────────────────┘
+        │
+        ▼
+Board aggiornata  ← output, non canale
 ```
 
----
+Quattro regole che l'esecuzione ha imposto:
+
+**Verificare eseguendo, non leggendo.** Una formula plausibile ma sbagliata supera la rilettura e fallisce l'aritmetica. Il reviewer di #3 ha ricopiato la funzione di calcolo in uno script, l'ha eseguita sui dati reali e ha confermato che la simulazione riproduce €79.09 esatti; quello di #1b ha verificato con uno script che nessuno dei riferimenti fra le 24 voci del glossario fosse orfano.
+
+**Il verdetto va sulla PR.** Se resta nella conversazione, il repo mostra PR mergiate senza traccia di review e i rilievi non bloccanti si perdono con la sessione.
+
+**Un test che ha trovato un difetto resta.** Rosso per dimostrare che discrimina, risolto, committato verde. Mai consegnare un test rosso: documenta il bug invece di ripararlo.
+
+**Se il difetto viene dal piano, si corregge il piano.** Altrimenti la prossima esecuzione lo riproduce. È successo due volte, su bug introdotti in fase di stesura.
+
+### Gate e supervisione
+
+**Gate automatici, su ogni Issue — sono l'unico meccanismo di qualità:**
+
+`npm run build` · `npm run test` · `npm run lint` · verdetto di review scritto sulla PR
+
+> `lint` non era nel gate iniziale, e per questo si sono accumulati in silenzio tre errori `react/no-unescaped-entities` più una config che segnalava `no-undef` su ogni file di test. **Senza approvazione umana, ogni buco nel gate diventa debito che nessuno intercetta.**
+
+**Supervisione umana: continua e non bloccante.** Nessun gate di approvazione è stato usato, e il pipeline ha comunque prodotto 8 Issue e 12 PR. Ma l'umano è intervenuto undici volte, e quattro di quelle hanno trovato difetti che l'automazione non vedeva:
+
+| Osservazione | Difetto trovato |
+|---|---|
+| «perché non vedo muoversi i task?» | board che scriveva su un campo non visibile nella vista |
+| «i problemi del review finiscono sulla PR?» | sei PR mergiate senza traccia di review |
+| «i test non si rimuovono se servono ancora» | 8 test di regressione cancellati dopo l'uso |
+| «rimetti il titolo dell'hub» | decisione di prodotto che nessun test può prendere |
+
+Nessuno di questi è un bug nel codice — quelli li hanno presi i Code Review Agent. Sono difetti **del processo**: il pipeline produceva verde mentre perdeva audit trail, rete di regressione e visibilità.
+
+Ne discende il principio di design: **si investe nella traccia, non nei cancelli.** Un gate bloccante mette davanti un diff da approvare, e con un diff davanti non si nota che la board è ferma. La superficie di supervisione è fatta di tre cose, e vanno trattate come meccanismo e non come contorno:
+
+1. la **board**, leggibile a colpo d'occhio sul campo che la vista mostra davvero
+2. il **verdetto di review sulla PR**, sempre
+3. i **rilievi non bloccanti su una Issue**, non nella memoria dell'Orchestrator
+
+Corollario operativo: il pipeline dev'essere interrompibile in qualsiasi momento e riprendibile. Lo stato vive su disco, e ogni passo lascia una traccia leggibile senza dover rileggere la conversazione.
+
+### Lavorare in più di uno sullo stesso repo
+
+Il pipeline assume un solo Orchestrator che possiede il repo. Durante questa sessione tre sessioni hanno scritto sullo stesso checkout, con conseguenze concrete: uno scaffold fuori specifica da rifare, `origin/main` rossa per una riscrittura di copy senza aggiornamento dei test, due worktree cancellati sotto i piedi da un `prune` concorrente, un push rifiutato per divergenza, e un conflitto su `Header.css` da risolvere a mano.
+
+Tre regole:
+
+1. **Una sessione, un worktree.** Mai due agenti — né due persone — nella stessa working tree.
+2. **`main` si tocca solo via PR**, con branch protection. Un commit diretto l'ha già rotta una volta.
+3. **Il contratto condiviso coordina anche le persone.** Se una sessione cambia le copy, «i test si aggiornano nello stesso commit» deve stare in `CLAUDE.md`, non nella memoria di chi c'era.
 
 ### Cosa rimane al piano di implementazione
 
-Il file `docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md` contiene il codice completo per ogni Issue. Il Developer Agent lo legge come contesto per implementare correttamente ogni feature.
+`docs/superpowers/plans/2026-09-14-finanzachiara-mvp.md` contiene il codice completo di ogni Issue, i criteri di accettazione e i numeri attesi. Il Developer Agent lo tratta come specifica eseguibile: il codice è già stato compilato, i blocchi dati eseguiti e l'aritmetica verificata, quindi va trascritto fedelmente. Quando non funziona, l'agente si ferma e lo segnala invece di aggirarlo in silenzio.
 
 ## 4. Architettura Generale
 

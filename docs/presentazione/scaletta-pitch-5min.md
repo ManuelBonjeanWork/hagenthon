@@ -71,11 +71,11 @@
 
 ## Slide 7 — Costruita da una pipeline di agenti
 
-- **Orchestrator** (Opus): coordina, assegna, verifica le dipendenze
-- **Developer, Code Review, Tester** (Sonnet): scrivono, rivedono e testano il codice
-- **GitHub PM** (Haiku): apre le PR e aggiorna il board
+- **Orchestrator** (Opus): legge il grafo delle dipendenze, dispatcha, monitora
+- Ciclo per ogni Issue: **Developer → Code Review → GitHub PM** (Sonnet · Sonnet · Haiku)
+- Dopo il merge: **gate umano**, poi **Tester** (solo Issue #6 — integrazione finale)
 
-**Nota speaker:** E qui la seconda metà della storia: come l'abbiamo costruita. Non un solo sviluppatore, ma una pipeline di agenti orchestrati, ciascuno con un ruolo. Un Orchestrator su Claude Opus coordina e verifica le dipendenze. Gli agenti Sonnet scrivono, rivedono e testano il codice. Un agente Haiku, più leggero, apre le PR e aggiorna il project board. Ogni Issue passa da mani diverse: sviluppo, revisione, test, chiusura.
+**Nota speaker:** E qui la seconda metà della storia: come l'abbiamo costruita. Non un solo sviluppatore, ma una pipeline di agenti orchestrati. L'Orchestrator su Claude Opus 5 legge il grafo delle dipendenze e decide quando dispatchare. Ogni Issue percorre lo stesso ciclo in sequenza: un agente Sonnet scrive il codice, un secondo Sonnet lo rivede, l'agente Haiku apre la PR e aggiorna il board — poi c'è un gate umano per il merge. Solo dopo il merge dell'Issue finale entra il Tester, che verifica il flusso end-to-end sull'app integrata.
 
 ---
 
@@ -84,8 +84,10 @@
 - Flusso **tema → design → mvp**
 - 8 Issue ordinate per dipendenze
 - 2 finestre di parallelismo → ~2 ore stimate sulla critical path
+- Il parallelismo è tra **Issue diverse**, non tra agenti della stessa Issue
+- Gate umano al merge di ogni PR — gli agenti non mergiano in autonomia
 
-**Nota speaker:** Il flusso è tema, design, mvp. Dal tema e dai vincoli, un agente ha prodotto il design doc; la pipeline ha poi implementato otto Issue, ordinate per dipendenze. Il punto è il parallelismo: dove le Issue erano indipendenti, più agenti hanno lavorato insieme, in due finestre. Context e dati prima; poi stanze e glossario. Il piano stimava circa due ore di sviluppo sulla critical path, contro uno sviluppo tutto in fila.
+**Nota speaker:** Il flusso è tema, design, mvp. Otto Issue ordinate per dipendenze: prima lo scaffolding, poi AppContext e DataLayer in parallelo, poi le quattro stanze UI in parallelo, infine l'integrazione. Il parallelismo avviene tra Issue indipendenti — più cicli Developer→Review→PM attivi contemporaneamente — non tra gli agenti di una stessa Issue, che lavorano sempre in sequenza. Il merge di ogni PR resta all'umano; il piano stimava circa due ore sulla critical path.
 
 ---
 
